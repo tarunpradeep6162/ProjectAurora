@@ -1,9 +1,12 @@
 import { motion } from "framer-motion";
 import GalaxyBackground from "../effects/GalaxyBackground";
+import ShootingStars from "../effects/ShootingStars";
+
 function Hero() {
   return (
     <section className="relative min-h-screen overflow-hidden bg-black text-white">
-      <GalaxyBackground />
+      <GalaxyBackground /> 
+      <ShootingStars />
       {/* Aurora Background */}
         <div className="absolute inset-0 z-[1]">
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-purple-600 opacity-20 blur-3xl"></div>

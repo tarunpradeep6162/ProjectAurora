@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
+import FloatingParticles from "./FloatingParticles";
 
 function GalaxyBackground() {
   return (
@@ -26,6 +27,7 @@ function GalaxyBackground() {
           fade
           speed={1}
         />
+      <FloatingParticles />
       </Canvas>
     </div>
   );
