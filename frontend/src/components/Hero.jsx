@@ -3,13 +3,13 @@ import GalaxyBackground from "../effects/GalaxyBackground";
 
 function Hero() {
   return (
-    <section className="relative min-h-screen overflow-hidden bg-black text-white">
-
+      <section className="relative min-h-screen overflow-hidden bg-black text-white">
+  <GalaxyBackground />
       {/* 3D Galaxy Background */}
       <GalaxyBackground />
 
       {/* Aurora Background */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-[1]">
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-purple-600 opacity-20 blur-3xl"></div>
 
         <div className="absolute top-40 right-0 h-96 w-96 rounded-full bg-pink-500 opacity-20 blur-3xl"></div>

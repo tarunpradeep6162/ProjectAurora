@@ -1,11 +1,15 @@
 import { motion } from "framer-motion";
 import GalaxyBackground from "../effects/GalaxyBackground";
+
 function Hero() {
   return (
     <section className="relative min-h-screen overflow-hidden bg-black text-white">
+
+      {/* 3D Galaxy Background */}
       <GalaxyBackground />
+
       {/* Aurora Background */}
-        <div className="absolute inset-0 z-[1]">
+      <div className="absolute inset-0">
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-purple-600 opacity-20 blur-3xl"></div>
 
         <div className="absolute top-40 right-0 h-96 w-96 rounded-full bg-pink-500 opacity-20 blur-3xl"></div>
@@ -36,19 +40,14 @@ function Hero() {
         </motion.p>
 
         <motion.button
-          whileHover={{
-            scale: 1.05,
-          }}
-          whileTap={{
-            scale: 0.95,
-          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           className="mt-12 rounded-full border border-white/20 bg-white/10 px-10 py-4 backdrop-blur-md transition"
         >
           Begin the Journey
         </motion.button>
 
       </div>
-
     </section>
   );
 }
