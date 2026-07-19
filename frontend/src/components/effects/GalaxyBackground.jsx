@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
 import FloatingParticles from "./FloatingParticles";
+import CameraController from "./CameraController";
 
 function GalaxyBackground() {
   return (
@@ -16,6 +17,7 @@ function GalaxyBackground() {
 
         {/* Soft Light */}
         <ambientLight intensity={0.5} />
+        <CameraController />
 
         {/* Animated Stars */}
         <Stars
