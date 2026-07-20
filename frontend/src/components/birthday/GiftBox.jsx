@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti";
 import Sparkles from "../effects/Sparkles";
+import Fireworks from "../effects/Fireworks";
 
 function GiftBox() {
 const [opened, setOpened] = useState(false);
@@ -22,6 +23,8 @@ const height = window.innerHeight;
   />
 )}
 {opened && <Sparkles />}
+{opened && <Fireworks />}
+
       {/* Gift Box */}
       <motion.div
         whileHover={{ scale: 1.05 }}
