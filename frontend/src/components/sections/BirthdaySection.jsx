@@ -1,18 +1,24 @@
+import ScrollReveal from "../animations/ScrollReveal";
+
 function BirthdaySection() {
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-black text-white">
 
-      <div className="text-center">
+      <ScrollReveal>
 
-        <h2 className="text-7xl font-bold">
-          Happy Birthday 🎂
-        </h2>
+        <div className="text-center">
 
-        <p className="mt-6 text-xl text-gray-400">
-          Your biggest surprise is waiting...
-        </p>
+          <h2 className="text-7xl font-bold">
+            Happy Birthday 🎂
+          </h2>
 
-      </div>
+          <p className="mt-6 text-xl text-gray-400">
+            Your biggest surprise is waiting...
+          </p>
+
+        </div>
+
+      </ScrollReveal>
 
     </section>
   );

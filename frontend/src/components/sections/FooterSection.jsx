@@ -1,18 +1,24 @@
+import ScrollReveal from "../animations/ScrollReveal";
+
 function FooterSection() {
   return (
     <footer className="min-h-screen flex items-center justify-center bg-black text-white">
 
-      <div className="text-center">
+      <ScrollReveal>
 
-        <h2 className="text-5xl font-bold">
-          Forever Starts Here ❤️
-        </h2>
+        <div className="text-center">
 
-        <p className="mt-6 text-gray-500">
-          Made with love by Tarun.
-        </p>
+          <h2 className="text-5xl font-bold">
+            Forever Starts Here ❤️
+          </h2>
 
-      </div>
+          <p className="mt-6 text-gray-500">
+            Made with love by Tarun.
+          </p>
+
+        </div>
+
+      </ScrollReveal>
 
     </footer>
   );
