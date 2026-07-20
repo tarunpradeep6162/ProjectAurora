@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti";
+import Sparkles from "../effects/Sparkles";
 
 function GiftBox() {
 const [opened, setOpened] = useState(false);
@@ -10,6 +11,7 @@ const height = window.innerHeight;
 
   return (
     <div className="flex flex-col items-center justify-center">
+
       {opened && (
   <Confetti
     width={width}
@@ -19,7 +21,7 @@ const height = window.innerHeight;
     gravity={0.18}
   />
 )}
-
+{opened && <Sparkles />}
       {/* Gift Box */}
       <motion.div
         whileHover={{ scale: 1.05 }}
