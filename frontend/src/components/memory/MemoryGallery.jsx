@@ -1,4 +1,6 @@
+import { useState } from "react";
 import MemoryCard from "./MemoryCard";
+import Lightbox from "../gallery/Lightbox";
 
 const memories = [
   {
@@ -18,6 +20,7 @@ const memories = [
   },
 ];
 function MemoryGallery() {
+const [selectedImage, setSelectedImage] = useState(null);
   return (
     <div className="mx-auto max-w-7xl px-6">
 
@@ -28,16 +31,24 @@ function MemoryGallery() {
       <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
 
         {memories.map((memory, index) => (
-          <MemoryCard
-            key={index}
-            image={memory.image}
-            title={memory.title}
-            description={memory.description}
-          />
+         <div
+  key={index}
+  onClick={() => setSelectedImage(memory.image)}
+  className="cursor-pointer"
+>
+  <MemoryCard
+    image={memory.image}
+    title={memory.title}
+    description={memory.description}
+  />
+</div>        
         ))}
 
       </div>
-
+        <Lightbox
+  image={selectedImage}
+  onClose={() => setSelectedImage(null)}
+/>
     </div>
   );
 }
