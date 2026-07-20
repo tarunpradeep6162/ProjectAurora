@@ -4,23 +4,23 @@ import Lightbox from "../gallery/Lightbox";
 
 const memories = [
   {
-    image: "https://picsum.photos/600/400?random=1",
+    image: "https://picsum.photos/800/600?random=1",
     title: "Our First Smile ❤️",
     description: "Every beautiful journey starts with one unforgettable moment.",
   },
   {
-    image: "https://picsum.photos/600/400?random=2",
+    image: "https://picsum.photos/800/600?random=2",
     title: "Together Forever 💕",
     description: "Every picture tells a story that words never can.",
   },
   {
-    image: "https://picsum.photos/600/400?random=3",
+    image: "https://picsum.photos/800/600?random=3",
     title: "Beautiful Memories 📸",
     description: "The best moments become our favorite memories.",
   },
 ];
 function MemoryGallery() {
-const [selectedImage, setSelectedImage] = useState(null);
+const [selectedIndex, setSelectedIndex] = useState(null);
   return (
     <div className="mx-auto max-w-7xl px-6">
 
@@ -33,7 +33,7 @@ const [selectedImage, setSelectedImage] = useState(null);
         {memories.map((memory, index) => (
          <div
   key={index}
-  onClick={() => setSelectedImage(memory.image)}
+onClick={() => setSelectedIndex(index)}
   className="cursor-pointer"
 >
   <MemoryCard
@@ -45,9 +45,10 @@ const [selectedImage, setSelectedImage] = useState(null);
         ))}
 
       </div>
-        <Lightbox
-  image={selectedImage}
-  onClose={() => setSelectedImage(null)}
+<Lightbox
+  memories={memories}
+  selectedIndex={selectedIndex}
+  setSelectedIndex={setSelectedIndex}
 />
     </div>
   );
