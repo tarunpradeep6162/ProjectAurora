@@ -1,11 +1,24 @@
+import HeroSection from "../components/sections/HeroSection";
+import StorySection from "../components/sections/StorySection";
+import MemorySection from "../components/sections/MemorySection";
+import LoveLetterSection from "../components/sections/LoveLetterSection";
+import JourneySection from "../components/sections/JourneySection";
+import BirthdaySection from "../components/sections/BirthdaySection";
+import FooterSection from "../components/sections/FooterSection";
+import MusicPlayer from "../components/music/MusicPlayer";
 function Home() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <h1 className="text-5xl font-bold">
-        Project Aurora
-      </h1>
-    </div>
-  )
+    <>
+      <HeroSection />
+      <StorySection />
+      <MemorySection />
+      <LoveLetterSection />
+      <JourneySection />
+      <BirthdaySection />
+      <FooterSection />
+      <MusicPlayer />
+    </>
+  );
 }
 
-export default Home
+export default Home;
