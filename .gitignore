@@ -25,3 +25,9 @@
 
 # Separate Git repository
 DevOps/
+
+# Local backups and private deployment files
+frontend-backup-*/
+github-actions-deploy
+github-actions-deploy.pub
+recovered-backend/compose.yaml.backup
