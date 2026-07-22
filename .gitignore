@@ -22,3 +22,6 @@
 
 # Dependencies
 **/node_modules/
+
+# Separate Git repository
+DevOps/
