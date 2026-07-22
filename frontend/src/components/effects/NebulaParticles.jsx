@@ -1,59 +1,73 @@
-import { useMemo, useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
+// Helper to generate a soft glowing circular particle texture programmatically
+function getSoftParticleTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+
+  const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+  gradient.addColorStop(0.3, "rgba(255, 105, 180, 0.8)");
+  gradient.addColorStop(0.7, "rgba(168, 85, 247, 0.2)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 128, 128);
+
+  return new THREE.CanvasTexture(canvas);
+}
+
 function NebulaParticles() {
-  const points = useRef();
+  const pointsRef = useRef();
 
-  const { positions, colors } = useMemo(() => {
-    const particleCount = 3000;
+  const [positions, colors, texture] = useMemo(() => {
+    const pos = [];
+    const col = [];
 
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
+    const colorPalette = [
+      new THREE.Color("#ff69b4"), // Hot Pink
+      new THREE.Color("#ff1493"), // Deep Pink
+      new THREE.Color("#da70d6"), // Orchid
+      new THREE.Color("#ffb6c1"), // Light Pink
+    ];
 
-    const color1 = new THREE.Color("#7c3aed");
-    const color2 = new THREE.Color("#3b82f6");
-    const color3 = new THREE.Color("#ec4899");
+    for (let i = 0; i < 1200; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 10 + Math.random() * 25;
 
-    for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
+      const x = r * Math.sin(phi) * Math.cos(theta) + (Math.random() - 0.5) * 8;
+      const y = r * Math.sin(phi) * Math.sin(theta) + (Math.random() - 0.5) * 8;
+      const z = r * Math.cos(phi) + (Math.random() - 0.5) * 8;
 
-      positions[i3] = (Math.random() - 0.5) * 40;
-      positions[i3 + 1] = (Math.random() - 0.5) * 20;
-      positions[i3 + 2] = (Math.random() - 0.5) * 40;
+      pos.push(x, y, z);
 
-      const random = Math.random();
-
-      let color;
-
-      if (random < 0.33) {
-        color = color1;
-      } else if (random < 0.66) {
-        color = color2;
-      } else {
-        color = color3;
-      }
-
-      colors[i3] = color.r;
-      colors[i3 + 1] = color.g;
-      colors[i3 + 2] = color.b;
+      const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+      col.push(randomColor.r, randomColor.g, randomColor.b);
     }
 
-    return {
-      positions,
-      colors,
-    };
+    return [
+      new Float32Array(pos), 
+      new Float32Array(col), 
+      getSoftParticleTexture()
+    ];
   }, []);
 
-  useFrame(() => {
-    if (points.current) {
-      points.current.rotation.y += 0.0003;
-      points.current.rotation.x += 0.00005;
+  useFrame(({ clock }) => {
+    if (pointsRef.current) {
+      const elapsedTime = clock.getElapsedTime();
+      pointsRef.current.rotation.y = elapsedTime * 0.02;
     }
   });
 
   return (
-    <points ref={points}>
+    <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -61,7 +75,6 @@ function NebulaParticles() {
           array={positions}
           itemSize={3}
         />
-
         <bufferAttribute
           attach="attributes-color"
           count={colors.length / 3}
@@ -71,10 +84,12 @@ function NebulaParticles() {
       </bufferGeometry>
 
       <pointsMaterial
-        size={0.15}
+        size={2.5}
         vertexColors
+        map={texture}
         transparent
-        opacity={0.5}
+        opacity={0.65}
+        blending={THREE.AdditiveBlending}
         depthWrite={false}
       />
     </points>

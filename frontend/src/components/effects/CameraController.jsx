@@ -1,11 +1,18 @@
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
+import { useRef } from "react";
 
 function CameraController() {
-  const { camera, mouse } = useThree();
+  const t = useRef(0);
 
-  useFrame(() => {
-    camera.position.x += (mouse.x * 2 - camera.position.x) * 0.05;
-    camera.position.y += (mouse.y * 2 - camera.position.y) * 0.05;
+  useFrame((state, delta) => {
+    t.current += delta * 0.15;
+
+    const camera = state.camera;
+
+    // Cinematic slow camera drift
+    camera.position.x = Math.sin(t.current) * 0.35;
+    camera.position.y = Math.cos(t.current * 0.8) * 0.18;
+    camera.position.z = 5 + Math.sin(t.current * 0.5) * 0.15;
 
     camera.lookAt(0, 0, 0);
   });

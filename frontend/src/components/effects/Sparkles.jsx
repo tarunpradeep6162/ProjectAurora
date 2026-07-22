@@ -1,36 +1,52 @@
 import { motion } from "framer-motion";
-
-const sparkles = [...Array(25)];
+import { useMemo } from "react";
 
 function Sparkles() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+  // Use useMemo for SSR compatibility & stable particle generation
+  const particles = useMemo(() => {
+    return [...Array(35)].map(() => ({
+      size: Math.random() * 3 + 1,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      duration: 3 + Math.random() * 4,
+      delay: Math.random() * 3,
+      drift: (Math.random() - 0.5) * 80,
+    }));
+  }, []);
 
-      {sparkles.map((_, i) => (
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-1">
+      {particles.map((p, i) => (
         <motion.div
           key={i}
-          className="absolute h-2 w-2 rounded-full bg-yellow-300"
-
+          className="absolute rounded-full bg-gradient-to-r from-pink-300 via-rose-200 to-white shadow-[0_0_12px_rgba(244,63,94,0.9)]"
+          style={{
+            width: p.size,
+            height: p.size,
+            left: `${p.left}%`,
+            top: `${p.top}%`,
+          }}
           initial={{
             opacity: 0,
             scale: 0,
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
+            y: 0,
+            x: 0,
           }}
-
           animate={{
-            opacity: [0, 1, 0],
-            scale: [0, 1.5, 0],
+            opacity: [0, 0.9, 1, 0.4, 0],
+            scale: [0.2, 1.4, 1.8, 0.8, 0],
+            y: [-20, -120],
+            x: [0, p.drift],
+            filter: ["blur(0px)", "blur(1px)", "blur(0px)"],
           }}
-
           transition={{
-            duration: 2 + Math.random() * 2,
-            delay: Math.random() * 2,
+            duration: p.duration,
+            delay: p.delay,
             repeat: Infinity,
+            ease: "easeInOut",
           }}
         />
       ))}
-
     </div>
   );
 }

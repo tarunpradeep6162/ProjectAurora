@@ -1,9 +1,81 @@
-import MemoryGallery from "../memory/MemoryGallery";
+import { motion } from "framer-motion";
 
 function MemorySection() {
   return (
-    <section className="min-h-screen bg-black py-24">
-      <MemoryGallery />
+    <section 
+      id="memories" 
+      className="relative min-h-screen w-full bg-slate-950 px-6 py-28 flex flex-col items-center justify-center overflow-hidden"
+    >
+      {/* Cinematic Deep Radial Vignette & Romantic Glow Backdrops */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.15)_0%,rgba(168,85,247,0.06)_50%,transparent_80%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_30%,rgba(2,6,23,0.9)_90%,rgba(2,6,23,1)_100%)] pointer-events-none z-0" />
+
+      {/* Floating Romantic Glow Orbs */}
+      <div className="absolute top-1/3 right-12 w-96 h-96 bg-pink-600/10 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '5s' }} />
+      <div className="absolute bottom-1/4 left-12 w-96 h-96 bg-purple-600/10 rounded-full blur-[160px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '7s' }} />
+
+      {/* Content Container */}
+      <div className="relative z-10 text-center max-w-3xl mx-auto flex flex-col items-center">
+        
+        {/* Romantic Glowing Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1 }}
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 px-5 py-2 backdrop-blur-xl shadow-[0_0_20px_rgba(244,63,94,0.25)]"
+        >
+          <span className="h-2 w-2 rounded-full bg-pink-400 animate-ping" />
+          <span className="text-xs uppercase tracking-[6px] text-pink-200 font-medium">
+            Treasured Moments
+          </span>
+        </motion.div>
+
+        {/* Cinematic Header Title */}
+        <motion.h2
+          initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.2, delay: 0.2 }}
+          className="text-4xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-pink-500 tracking-tight"
+        >
+          Beautiful Memories ❤️
+        </motion.h2>
+
+        {/* Cinematic Description */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.2, delay: 0.4 }}
+          className="mt-6 text-lg sm:text-xl text-pink-100/70 font-light tracking-wide max-w-xl italic leading-relaxed"
+        >
+          Soon this section will blossom into an immersive, floating gallery of our timeless universe together.
+        </motion.p>
+
+        {/* Decorative Cinematic Pulsing Frame / Placeholder Glow */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.4, delay: 0.6 }}
+          className="mt-12 w-full max-w-md h-64 rounded-3xl border border-pink-500/20 bg-gradient-to-b from-pink-500/5 to-purple-500/5 backdrop-blur-md shadow-[0_0_40px_rgba(244,63,94,0.15)] flex flex-col items-center justify-center p-8 relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,105,180,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          
+          <span className="text-4xl mb-3 animate-bounce">📸</span>
+          <span className="text-sm uppercase tracking-[4px] text-pink-200/90 font-medium">
+            Gallery Coming Soon
+          </span>
+          <span className="text-xs text-pink-300/50 mt-2 font-light">
+            Prepared with infinite love & cinema
+          </span>
+        </motion.div>
+
+      </div>
+
+      {/* Seamless Transition Fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-2" />
     </section>
   );
 }
