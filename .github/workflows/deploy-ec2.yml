@@ -18,7 +18,7 @@ jobs:
           chmod 600 ~/.ssh/ec2_key
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy Docker containers
+      - name: Deploy and verify application
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
@@ -28,15 +28,76 @@ jobs:
 
             cd /home/ubuntu/recovered-backend
 
+            echo "Saving currently running image references..."
+
+            OLD_BACKEND_IMAGE=$(sudo docker inspect birthday-backend \
+              --format='{{.Image}}' 2>/dev/null || true)
+
+            OLD_FRONTEND_IMAGE=$(sudo docker inspect birthday-frontend \
+              --format='{{.Image}}' 2>/dev/null || true)
+
+            echo "Pulling latest images..."
             sudo docker compose pull
+
+            echo "Deploying latest containers..."
             sudo docker compose up -d --remove-orphans
 
-            sudo docker image prune -f
+            echo "Waiting for health checks..."
 
-            echo "Waiting for containers..."
-            sleep 30
+            ATTEMPT=1
+            MAX_ATTEMPTS=12
+
+            while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+              BACKEND_HEALTH=$(sudo docker inspect birthday-backend \
+                --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+                2>/dev/null || echo "missing")
+
+              FRONTEND_HEALTH=$(sudo docker inspect birthday-frontend \
+                --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+                2>/dev/null || echo "missing")
+
+              echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+              echo "Backend: $BACKEND_HEALTH"
+              echo "Frontend: $FRONTEND_HEALTH"
+
+              if [ "$BACKEND_HEALTH" = "healthy" ] && \
+                 [ "$FRONTEND_HEALTH" = "healthy" ]; then
+                echo "Both containers are healthy."
+                break
+              fi
+
+              if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
+                echo "Deployment health verification failed."
+
+                if [ -n "$OLD_BACKEND_IMAGE" ] && [ -n "$OLD_FRONTEND_IMAGE" ]; then
+                  echo "Rolling back to previous images..."
+
+                  sudo docker tag "$OLD_BACKEND_IMAGE" \
+                    tarunpradeep6162/birthday-backend:latest
+
+                  sudo docker tag "$OLD_FRONTEND_IMAGE" \
+                    tarunpradeep6162/birthday-frontend:latest
+
+                  sudo docker compose up -d --force-recreate
+                fi
+
+                exit 1
+              fi
+
+              ATTEMPT=$((ATTEMPT + 1))
+              sleep 10
+            done
+
+            echo "Testing application endpoints..."
+
+            curl --fail --retry 5 --retry-delay 5 \
+              http://localhost/api/health
+
+            curl --fail --retry 5 --retry-delay 5 \
+              http://localhost/ > /dev/null
 
             sudo docker compose ps
+            sudo docker image prune -f
 
-            curl --fail http://localhost/api/health
+            echo "Deployment completed successfully."
           EOF
