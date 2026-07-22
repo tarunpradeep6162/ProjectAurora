@@ -1,11 +1,30 @@
 name: Deploy to EC2
 
 on:
+  workflow_run:
+    workflows:
+      - Frontend Docker CI
+      - Backend Docker CI
+    types:
+      - completed
+
   workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: production
 
     steps:
       - name: Configure SSH
@@ -13,10 +32,25 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
+          set -e
+
           mkdir -p ~/.ssh
+
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
+
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/ec2_key \
+            -o ConnectTimeout=15 \
+            "$EC2_USER@$EC2_HOST" \
+            "echo 'SSH connection successful'"
 
       - name: Deploy and verify application
         env:
@@ -24,63 +58,94 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
           ssh -i ~/.ssh/ec2_key "$EC2_USER@$EC2_HOST" << 'EOF'
-            set -e
+            set -Eeuo pipefail
 
-            cd /home/ubuntu/recovered-backend
+            APP_DIR="/home/ubuntu/recovered-backend"
+            BACKEND_IMAGE="tarunpradeep6162/birthday-backend:latest"
+            FRONTEND_IMAGE="tarunpradeep6162/birthday-frontend:latest"
 
-            echo "Saving currently running image references..."
+            cd "$APP_DIR"
 
-            OLD_BACKEND_IMAGE=$(sudo docker inspect birthday-backend \
-              --format='{{.Image}}' 2>/dev/null || true)
+            echo "Recording current image IDs..."
 
-            OLD_FRONTEND_IMAGE=$(sudo docker inspect birthday-frontend \
-              --format='{{.Image}}' 2>/dev/null || true)
+            OLD_BACKEND_ID=$(
+              sudo docker inspect birthday-backend \
+                --format='{{.Image}}' 2>/dev/null || true
+            )
 
-            echo "Pulling latest images..."
+            OLD_FRONTEND_ID=$(
+              sudo docker inspect birthday-frontend \
+                --format='{{.Image}}' 2>/dev/null || true
+            )
+
+            rollback() {
+              echo "Deployment failed. Starting rollback..."
+
+              if [ -n "$OLD_BACKEND_ID" ]; then
+                sudo docker tag \
+                  "$OLD_BACKEND_ID" \
+                  "$BACKEND_IMAGE"
+              fi
+
+              if [ -n "$OLD_FRONTEND_ID" ]; then
+                sudo docker tag \
+                  "$OLD_FRONTEND_ID" \
+                  "$FRONTEND_IMAGE"
+              fi
+
+              sudo docker compose up -d \
+                --force-recreate \
+                --remove-orphans
+
+              echo "Rollback containers:"
+              sudo docker compose ps
+            }
+
+            trap rollback ERR
+
+            echo "Pulling images from Docker Hub..."
             sudo docker compose pull
 
-            echo "Deploying latest containers..."
-            sudo docker compose up -d --remove-orphans
+            echo "Starting updated containers..."
+            sudo docker compose up -d \
+              --remove-orphans
 
-            echo "Waiting for health checks..."
+            echo "Waiting for container health checks..."
 
+            MAX_ATTEMPTS=18
             ATTEMPT=1
-            MAX_ATTEMPTS=12
 
             while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
-              BACKEND_HEALTH=$(sudo docker inspect birthday-backend \
-                --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
-                2>/dev/null || echo "missing")
+              BACKEND_HEALTH=$(
+                sudo docker inspect birthday-backend \
+                  --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+                  2>/dev/null || echo "missing"
+              )
 
-              FRONTEND_HEALTH=$(sudo docker inspect birthday-frontend \
-                --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
-                2>/dev/null || echo "missing")
+              FRONTEND_HEALTH=$(
+                sudo docker inspect birthday-frontend \
+                  --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+                  2>/dev/null || echo "missing"
+              )
 
               echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
-              echo "Backend: $BACKEND_HEALTH"
-              echo "Frontend: $FRONTEND_HEALTH"
+              echo "Backend status: $BACKEND_HEALTH"
+              echo "Frontend status: $FRONTEND_HEALTH"
 
-              if [ "$BACKEND_HEALTH" = "healthy" ] && \
+              if [ "$BACKEND_HEALTH" = "healthy" ] &&
                  [ "$FRONTEND_HEALTH" = "healthy" ]; then
-                echo "Both containers are healthy."
+                echo "All containers are healthy."
                 break
               fi
 
+              if [ "$BACKEND_HEALTH" = "unhealthy" ] ||
+                 [ "$FRONTEND_HEALTH" = "unhealthy" ]; then
+                echo "A container became unhealthy."
+                exit 1
+              fi
+
               if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
-                echo "Deployment health verification failed."
-
-                if [ -n "$OLD_BACKEND_IMAGE" ] && [ -n "$OLD_FRONTEND_IMAGE" ]; then
-                  echo "Rolling back to previous images..."
-
-                  sudo docker tag "$OLD_BACKEND_IMAGE" \
-                    tarunpradeep6162/birthday-backend:latest
-
-                  sudo docker tag "$OLD_FRONTEND_IMAGE" \
-                    tarunpradeep6162/birthday-frontend:latest
-
-                  sudo docker compose up -d --force-recreate
-                fi
-
+                echo "Timed out waiting for healthy containers."
                 exit 1
               fi
 
@@ -88,16 +153,39 @@ jobs:
               sleep 10
             done
 
-            echo "Testing application endpoints..."
-
-            curl --fail --retry 5 --retry-delay 5 \
+            echo "Testing backend endpoint..."
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --retry 5 \
+              --retry-delay 5 \
               http://localhost/api/health
 
-            curl --fail --retry 5 --retry-delay 5 \
-              http://localhost/ > /dev/null
+            echo
 
+            echo "Testing frontend endpoint..."
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --retry 5 \
+              --retry-delay 5 \
+              http://localhost/ \
+              > /dev/null
+
+            trap - ERR
+
+            echo "Deployment status:"
             sudo docker compose ps
+
+            echo "Removing unused Docker images..."
             sudo docker image prune -f
 
-            echo "Deployment completed successfully."
+            echo "Production deployment completed successfully."
           EOF
+
+      - name: Remove temporary SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/ec2_key
