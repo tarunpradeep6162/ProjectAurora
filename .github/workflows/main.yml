@@ -1,1 +1,33 @@
-commit
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - feature/galaxy-background
+
+  pull_request:
+    branches:
+      - main
+      - master
+      - feature/galaxy-background
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build React Application
+        run: npm run build
