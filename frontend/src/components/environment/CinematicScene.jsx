@@ -2,13 +2,12 @@ import AdaptiveQuality from "./AdaptiveQuality";
 import CameraRig from "./CameraRig";
 import Nebula from "./objects/Nebula";
 import StarField from "./objects/StarField";
+import Effects from "./postprocessing/Effects";
 
 function CinematicScene({ quality }) {
   return (
     <>
-      <CameraRig
-        motionEnabled={quality.motionEnabled}
-      />
+      <CameraRig motionEnabled={quality.motionEnabled} />
 
       <AdaptiveQuality
         maximumDpr={quality.maxDpr}
@@ -24,6 +23,8 @@ function CinematicScene({ quality }) {
         count={quality.starCount}
         motionEnabled={quality.motionEnabled}
       />
+
+      <Effects />
     </>
   );
 }
