@@ -1,99 +1,191 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
+
+const cinematicEase = [0.16, 1, 0.3, 1];
 
 function Lightbox({
   memories,
   selectedIndex,
   setSelectedIndex,
 }) {
-  const onClose = () => setSelectedIndex(null);
+  const isOpen = selectedIndex !== null;
 
-  const nextImage = () => {
-    setSelectedIndex((selectedIndex + 1) % memories.length);
+  const closeLightbox = () => {
+    setSelectedIndex(null);
   };
 
-  const prevImage = () => {
-    setSelectedIndex(
-      (selectedIndex - 1 + memories.length) % memories.length
+  const showNext = () => {
+    setSelectedIndex((currentIndex) =>
+      currentIndex === null
+        ? 0
+        : (currentIndex + 1) % memories.length,
+    );
+  };
+
+  const showPrevious = () => {
+    setSelectedIndex((currentIndex) =>
+      currentIndex === null
+        ? 0
+        : (currentIndex - 1 + memories.length) %
+          memories.length,
     );
   };
 
   useEffect(() => {
-    function handleKey(event) {
-      if (selectedIndex === null) return;
-
-      if (event.key === "Escape") onClose();
-
-      if (event.key === "ArrowRight") nextImage();
-
-      if (event.key === "ArrowLeft") prevImage();
+    if (!isOpen) {
+      return undefined;
     }
 
-    window.addEventListener("keydown", handleKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-    return () => window.removeEventListener("keydown", handleKey);
-  });
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeLightbox();
+      }
 
-  if (selectedIndex === null) return null;
+      if (event.key === "ArrowRight") {
+        showNext();
+      }
 
-  const memory = memories[selectedIndex];
+      if (event.key === "ArrowLeft") {
+        showPrevious();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [isOpen]);
+
+  const memory =
+    selectedIndex === null
+      ? null
+      : memories[selectedIndex];
 
   return (
     <AnimatePresence>
-
-      <motion.div
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-
-        <motion.img
-          src={memory.image}
-          alt={memory.title}
-          className="max-h-[80vh] max-w-[90vw] rounded-2xl shadow-2xl"
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0.8 }}
-          transition={{ duration: 0.3 }}
-          onClick={(e) => e.stopPropagation()}
-        />
-
-        <h2 className="mt-8 text-3xl font-bold text-white">
-          {memory.title}
-        </h2>
-
-        <p className="mt-2 text-gray-300">
-          {memory.description}
-        </p>
-
-        <p className="mt-6 text-white">
-          {selectedIndex + 1} / {memories.length}
-        </p>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            prevImage();
-          }}
-          className="absolute left-10 top-1/2 rounded-full bg-white/10 p-4 text-3xl text-white backdrop-blur-md"
+      {isOpen && memory && (
+        <motion.div
+          className="memory-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={memory.title}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={closeLightbox}
         >
-          ←
-        </button>
+          <motion.div
+            className="memory-lightbox__frame"
+            initial={{
+              opacity: 0,
+              scale: 0.9,
+              y: 30,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: 0,
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0.94,
+              y: 20,
+            }}
+            transition={{
+              duration: 0.55,
+              ease: cinematicEase,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="memory-lightbox__close"
+              onClick={closeLightbox}
+              aria-label="Close memory"
+            >
+              <span />
+              <span />
+            </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            nextImage();
-          }}
-          className="absolute right-10 top-1/2 rounded-full bg-white/10 p-4 text-3xl text-white backdrop-blur-md"
-        >
-          →
-        </button>
+            <div className="memory-lightbox__image-wrap">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={selectedIndex}
+                  src={memory.image}
+                  alt={memory.title}
+                  className="memory-lightbox__image"
+                  initial={{
+                    opacity: 0,
+                    scale: 1.04,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.98,
+                  }}
+                  transition={{
+                    duration: 0.45,
+                    ease: cinematicEase,
+                  }}
+                />
+              </AnimatePresence>
+            </div>
 
-      </motion.div>
+            <div className="memory-lightbox__details">
+              <div>
+                <span className="memory-lightbox__tag">
+                  {memory.tag}
+                </span>
 
+                <h2>{memory.title}</h2>
+
+                <p>{memory.description}</p>
+              </div>
+
+              <span className="memory-lightbox__count">
+                {String(selectedIndex + 1).padStart(2, "0")}
+                <i />
+                {String(memories.length).padStart(2, "0")}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="
+                memory-lightbox__navigation
+                memory-lightbox__navigation--previous
+              "
+              onClick={showPrevious}
+              aria-label="Previous memory"
+            >
+              ←
+            </button>
+
+            <button
+              type="button"
+              className="
+                memory-lightbox__navigation
+                memory-lightbox__navigation--next
+              "
+              onClick={showNext}
+              aria-label="Next memory"
+            >
+              →
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }

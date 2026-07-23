@@ -1,12 +1,52 @@
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { useEnvironmentController } from "../controllers/EnvironmentController";
+
+function getQualitySettings(qualityLevel) {
+  switch (qualityLevel) {
+    case "low":
+      return {
+        detail: 0.55,
+        brightness: 0.82,
+        motionSpeed: 0.72,
+      };
+
+    case "medium":
+      return {
+        detail: 0.78,
+        brightness: 0.92,
+        motionSpeed: 0.86,
+      };
+
+    case "high":
+    default:
+      return {
+        detail: 1,
+        brightness: 1,
+        motionSpeed: 1,
+      };
+  }
+}
 
 function Nebula({
   motionEnabled = true,
   qualityLevel = "high",
 }) {
-  const meshRef = useRef();
+  const meshRef = useRef(null);
+
+  const { stateRef } =
+    useEnvironmentController();
+
+  const settings = useMemo(
+    () => getQualitySettings(qualityLevel),
+    [qualityLevel]
+  );
+
+  const geometry = useMemo(
+    () => new THREE.PlaneGeometry(2, 2),
+    []
+  );
 
   const material = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -14,9 +54,56 @@ function Nebula({
       depthWrite: false,
       depthTest: false,
       side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      toneMapped: false,
 
       uniforms: {
-        uTime: { value: 0 },
+        uTime: {
+          value: 0,
+        },
+
+        uResolution: {
+          value: new THREE.Vector2(
+            window.innerWidth,
+            window.innerHeight
+          ),
+        },
+
+        uDetail: {
+          value: settings.detail,
+        },
+
+        uBrightness: {
+          value: settings.brightness,
+        },
+
+        uMotionStrength: {
+          value: motionEnabled ? 1 : 0,
+        },
+
+        uMotionSpeed: {
+          value: settings.motionSpeed,
+        },
+
+        uCinematicIntensity: {
+          value: 0.72,
+        },
+
+        uWarmth: {
+          value: 0,
+        },
+
+        uDepth: {
+          value: 0.18,
+        },
+
+        uCalmness: {
+          value: 1,
+        },
+
+        uScrollVelocity: {
+          value: 0,
+        },
       },
 
       vertexShader: `
@@ -24,92 +111,710 @@ function Nebula({
 
         void main() {
           vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+          gl_Position =
+            projectionMatrix *
+            modelViewMatrix *
+            vec4(position, 1.0);
         }
       `,
 
       fragmentShader: `
+        precision highp float;
+
         uniform float uTime;
+        uniform vec2 uResolution;
+        uniform float uDetail;
+        uniform float uBrightness;
+        uniform float uMotionStrength;
+        uniform float uMotionSpeed;
+        uniform float uCinematicIntensity;
+        uniform float uWarmth;
+        uniform float uDepth;
+        uniform float uCalmness;
+        uniform float uScrollVelocity;
+
         varying vec2 vUv;
 
-        float hash(vec2 p){
-          return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123);
-        }
-
-        float noise(vec2 p){
-          vec2 i = floor(p);
-          vec2 f = fract(p);
-
-          float a = hash(i);
-          float b = hash(i + vec2(1.0,0.0));
-          float c = hash(i + vec2(0.0,1.0));
-          float d = hash(i + vec2(1.0,1.0));
-
-          vec2 u = f*f*(3.0-2.0*f);
-
-          return mix(a,b,u.x)
-               + (c-a)*u.y*(1.0-u.x)
-               + (d-b)*u.x*u.y;
-        }
-
-        float fbm(vec2 p){
-          float v = 0.0;
-          float a = 0.5;
-
-          for(int i=0;i<5;i++){
-            v += a * noise(p);
-            p *= 2.0;
-            a *= 0.5;
-          }
-
-          return v;
-        }
-
-        void main(){
-
-          vec2 uv = vUv - 0.5;
-          uv.x *= 1.5;
-
-          float n = fbm(
-            uv * 3.0 +
-            vec2(uTime * 0.02, uTime * 0.01)
+        float hash21(vec2 point) {
+          point = fract(
+            point *
+            vec2(123.34, 456.21)
           );
 
-          vec3 c1 = vec3(0.03,0.02,0.10);
-          vec3 c2 = vec3(0.15,0.05,0.35);
-          vec3 c3 = vec3(0.60,0.18,0.85);
+          point += dot(
+            point,
+            point + 45.32
+          );
 
-          vec3 color = mix(c1, c2, n);
-          color = mix(color, c3, pow(n,2.0));
+          return fract(
+            point.x *
+            point.y
+          );
+        }
 
-          float alpha = smoothstep(0.15,0.9,n) * 0.35;
+        float valueNoise(vec2 point) {
+          vec2 cell = floor(point);
+          vec2 local = fract(point);
 
-          gl_FragColor = vec4(color, alpha);
+          local =
+            local *
+            local *
+            (
+              3.0 -
+              2.0 *
+              local
+            );
+
+          float bottomLeft =
+            hash21(cell);
+
+          float bottomRight =
+            hash21(
+              cell +
+              vec2(1.0, 0.0)
+            );
+
+          float topLeft =
+            hash21(
+              cell +
+              vec2(0.0, 1.0)
+            );
+
+          float topRight =
+            hash21(
+              cell +
+              vec2(1.0, 1.0)
+            );
+
+          return mix(
+            mix(
+              bottomLeft,
+              bottomRight,
+              local.x
+            ),
+            mix(
+              topLeft,
+              topRight,
+              local.x
+            ),
+            local.y
+          );
+        }
+
+        mat2 rotate2D(float angle) {
+          float sine = sin(angle);
+          float cosine = cos(angle);
+
+          return mat2(
+            cosine,
+            -sine,
+            sine,
+            cosine
+          );
+        }
+
+        float fbmLow(vec2 point) {
+          float result = 0.0;
+          float amplitude = 0.5;
+
+          for (
+            int octave = 0;
+            octave < 4;
+            octave += 1
+          ) {
+            result +=
+              amplitude *
+              valueNoise(point);
+
+            point =
+              rotate2D(0.42) *
+              point *
+              2.03 +
+              vec2(8.3, 3.7);
+
+            amplitude *= 0.5;
+          }
+
+          return result;
+        }
+
+        float fbmHigh(vec2 point) {
+          float result = 0.0;
+          float amplitude = 0.5;
+
+          for (
+            int octave = 0;
+            octave < 6;
+            octave += 1
+          ) {
+            result +=
+              amplitude *
+              valueNoise(point);
+
+            point =
+              rotate2D(0.48) *
+              point *
+              2.01 +
+              vec2(6.8, 4.2);
+
+            amplitude *= 0.5;
+          }
+
+          return result;
+        }
+
+        float softCircle(
+          vec2 point,
+          vec2 center,
+          float radius,
+          float softness
+        ) {
+          float distanceFromCenter =
+            length(
+              point -
+              center
+            );
+
+          return 1.0 -
+            smoothstep(
+              radius,
+              radius + softness,
+              distanceFromCenter
+            );
+        }
+
+        void main() {
+          vec2 uv =
+            vUv -
+            vec2(0.5);
+
+          float aspect =
+            uResolution.x /
+            max(
+              uResolution.y,
+              1.0
+            );
+
+          uv.x *= aspect;
+
+          float reactiveMotion =
+            mix(
+              0.82,
+              1.08,
+              uDepth
+            );
+
+          reactiveMotion *=
+            mix(
+              0.88,
+              1.0,
+              uCalmness
+            );
+
+          reactiveMotion +=
+            min(
+              abs(uScrollVelocity) * 0.025,
+              0.08
+            );
+
+          float time =
+            uTime *
+            uMotionSpeed *
+            uMotionStrength *
+            reactiveMotion;
+
+          vec2 slowDrift =
+            vec2(
+              time * 0.006,
+              time * 0.0035
+            );
+
+          vec2 warpedUv =
+            uv *
+            rotate2D(
+              sin(
+                time * 0.025
+              ) * 0.04
+            );
+
+          float largeCloud =
+            fbmLow(
+              warpedUv * 1.65 +
+              slowDrift
+            );
+
+          vec2 distortion =
+            vec2(
+              fbmLow(
+                warpedUv * 2.15 +
+                vec2(
+                  4.3,
+                  time * 0.004
+                )
+              ),
+              fbmLow(
+                warpedUv * 2.05 +
+                vec2(
+                  -3.1,
+                  -time * 0.003
+                )
+              )
+            );
+
+          distortion =
+            distortion *
+            2.0 -
+            1.0;
+
+          float distortionStrength =
+            mix(
+              0.15,
+              0.225,
+              uDepth
+            );
+
+          distortionStrength +=
+            min(
+              abs(uScrollVelocity) * 0.018,
+              0.035
+            );
+
+          vec2 cloudUv =
+            warpedUv +
+            distortion *
+            distortionStrength;
+
+          float mediumCloud =
+            fbmHigh(
+              cloudUv * 2.4 +
+              slowDrift * 1.7
+            );
+
+          float fineCloud =
+            fbmHigh(
+              cloudUv * 4.8 -
+              slowDrift * 0.8
+            );
+
+          float detailCloud =
+            mix(
+              mediumCloud,
+              fineCloud,
+              0.34 * uDetail
+            );
+
+          float densityThreshold =
+            mix(
+              0.31,
+              0.255,
+              uDepth
+            );
+
+          float nebulaShape =
+            smoothstep(
+              densityThreshold,
+              0.82,
+              largeCloud * 0.64 +
+              detailCloud * 0.62
+            );
+
+          float centralBand =
+            exp(
+              -abs(
+                uv.y +
+                sin(
+                  uv.x * 2.1 +
+                  time * 0.012
+                ) * 0.12
+              ) * 2.1
+            );
+
+          centralBand *=
+            smoothstep(
+              1.4,
+              0.15,
+              abs(uv.x)
+            );
+
+          float leftCloud =
+            softCircle(
+              uv,
+              vec2(-0.55, 0.12),
+              0.72,
+              0.58
+            );
+
+          float rightCloud =
+            softCircle(
+              uv,
+              vec2(0.62, -0.16),
+              0.78,
+              0.62
+            );
+
+          float upperGlow =
+            softCircle(
+              uv,
+              vec2(0.08, 0.58),
+              0.55,
+              0.72
+            );
+
+          float cloudMask =
+            nebulaShape *
+            (
+              leftCloud * 0.84 +
+              rightCloud * 0.78 +
+              upperGlow * 0.42 +
+              centralBand * 0.52
+            );
+
+          vec3 deepSpace =
+            vec3(
+              0.006,
+              0.004,
+              0.020
+            );
+
+          vec3 midnightBlue =
+            vec3(
+              0.025,
+              0.030,
+              0.120
+            );
+
+          vec3 violet =
+            vec3(
+              0.200,
+              0.055,
+              0.410
+            );
+
+          vec3 romanticRose =
+            vec3(
+              0.620,
+              0.090,
+              0.360
+            );
+
+          vec3 softMagenta =
+            vec3(
+              0.850,
+              0.180,
+              0.540
+            );
+
+          vec3 warmHighlight =
+            vec3(
+              1.000,
+              0.510,
+              0.640
+            );
+
+          vec3 scrollViolet =
+            vec3(
+              0.315,
+              0.075,
+              0.520
+            );
+
+          vec3 scrollRose =
+            vec3(
+              0.900,
+              0.180,
+              0.490
+            );
+
+          vec3 scrollHighlight =
+            vec3(
+              1.000,
+              0.660,
+              0.740
+            );
+
+          violet =
+            mix(
+              violet,
+              scrollViolet,
+              uWarmth * 0.36
+            );
+
+          romanticRose =
+            mix(
+              romanticRose,
+              scrollRose,
+              uWarmth * 0.58
+            );
+
+          softMagenta =
+            mix(
+              softMagenta,
+              scrollRose,
+              uWarmth * 0.30
+            );
+
+          warmHighlight =
+            mix(
+              warmHighlight,
+              scrollHighlight,
+              uWarmth * 0.62
+            );
+
+          vec3 color =
+            mix(
+              deepSpace,
+              midnightBlue,
+              largeCloud
+            );
+
+          color =
+            mix(
+              color,
+              violet,
+              smoothstep(
+                0.34,
+                0.72,
+                mediumCloud
+              )
+            );
+
+          color =
+            mix(
+              color,
+              romanticRose,
+              smoothstep(
+                0.48,
+                0.84,
+                detailCloud
+              ) *
+              leftCloud
+            );
+
+          color =
+            mix(
+              color,
+              softMagenta,
+              pow(
+                max(
+                  fineCloud - 0.43,
+                  0.0
+                ),
+                1.55
+              ) *
+              rightCloud *
+              1.32
+            );
+
+          float highlight =
+            pow(
+              max(
+                detailCloud - 0.62,
+                0.0
+              ),
+              2.2
+            ) *
+            centralBand;
+
+          color +=
+            warmHighlight *
+            highlight *
+            0.72;
+
+          float darkDust =
+            fbmHigh(
+              cloudUv * 3.3 +
+              vec2(
+                11.4,
+                -7.2
+              )
+            );
+
+          darkDust =
+            smoothstep(
+              0.48,
+              0.71,
+              darkDust
+            );
+
+          color *=
+            1.0 -
+            darkDust *
+            0.34 *
+            cloudMask;
+
+          float edgeDistance =
+            length(
+              uv *
+              vec2(
+                0.72,
+                0.92
+              )
+            );
+
+          float vignette =
+            1.0 -
+            smoothstep(
+              0.42,
+              1.28,
+              edgeDistance
+            );
+
+          float alpha =
+            cloudMask *
+            (
+              0.16 +
+              centralBand * 0.11 +
+              highlight * 0.18
+            );
+
+          alpha *=
+            mix(
+              0.78,
+              1.0,
+              vignette
+            );
+
+          float reactiveBrightness =
+            uBrightness *
+            uCinematicIntensity;
+
+          reactiveBrightness *=
+            mix(
+              0.96,
+              1.055,
+              uDepth
+            );
+
+          alpha *=
+            reactiveBrightness;
+
+          color *=
+            reactiveBrightness;
+
+          color +=
+            midnightBlue *
+            vignette *
+            0.028;
+
+          gl_FragColor =
+            vec4(
+              color,
+              clamp(
+                alpha,
+                0.0,
+                mix(
+                  0.42,
+                  0.54,
+                  uDepth
+                )
+              )
+            );
         }
       `,
     });
   }, []);
 
-  useFrame(({ clock }) => {
-    material.uniforms.uTime.value = clock.elapsedTime;
+  useEffect(() => {
+    material.uniforms.uDetail.value =
+      settings.detail;
 
-    if (motionEnabled && meshRef.current) {
+    material.uniforms.uBrightness.value =
+      settings.brightness;
+
+    material.uniforms.uMotionSpeed.value =
+      settings.motionSpeed;
+  }, [material, settings]);
+
+  useEffect(() => {
+    material.uniforms.uMotionStrength.value =
+      motionEnabled ? 1 : 0;
+  }, [material, motionEnabled]);
+
+  useEffect(() => {
+    const updateResolution = () => {
+      material.uniforms.uResolution.value.set(
+        window.innerWidth,
+        window.innerHeight
+      );
+    };
+
+    updateResolution();
+
+    window.addEventListener(
+      "resize",
+      updateResolution,
+      { passive: true }
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        updateResolution
+      );
+    };
+  }, [material]);
+
+  useFrame(({ clock }) => {
+    material.uniforms.uTime.value =
+      clock.elapsedTime;
+
+    const environment =
+      stateRef.current;
+
+    material.uniforms.uCinematicIntensity.value =
+      environment.cinematicIntensity;
+
+    material.uniforms.uWarmth.value =
+      environment.warmth;
+
+    material.uniforms.uDepth.value =
+      environment.depth;
+
+    material.uniforms.uCalmness.value =
+      environment.calmness;
+
+    material.uniforms.uScrollVelocity.value =
+      environment.velocity;
+
+    if (
+      motionEnabled &&
+      meshRef.current
+    ) {
       meshRef.current.rotation.z =
-        Math.sin(clock.elapsedTime * 0.05) * 0.02;
+        Math.sin(
+          clock.elapsedTime * 0.018
+        ) * 0.012;
+
+      const breathingScale =
+        25 +
+        Math.sin(
+          clock.elapsedTime * 0.022
+        ) * 0.18;
+
+      meshRef.current.scale.setScalar(
+        breathingScale
+      );
     }
   });
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
 
   return (
     <mesh
       ref={meshRef}
+      geometry={geometry}
+      material={material}
       position={[0, 0, -15]}
       scale={25}
       frustumCulled={false}
       renderOrder={-10}
-    >
-      <planeGeometry args={[2, 2]} />
-      <primitive object={material} attach="material" />
-    </mesh>
+    />
   );
 }
 

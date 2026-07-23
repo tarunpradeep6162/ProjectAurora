@@ -1,107 +1,147 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import MemoryCard from "./MemoryCard";
+import { motion, useReducedMotion } from "framer-motion";
 import Lightbox from "../gallery/Lightbox";
+import albumImage from "../../assets/images/album.jpg";
+
+const cinematicEase = [0.16, 1, 0.3, 1];
 
 const memories = [
   {
-    image: "https://picsum.photos/800/600?random=1",
-    title: "Our First Smile ❤️",
-    description: "Every beautiful journey starts with one unforgettable moment.",
+    image: albumImage,
     tag: "Chapter I",
+    title: "The First Beautiful Moment",
+    description:
+      "The kind of memory that quietly becomes the beginning of everything.",
+    position: "memory-gallery__item--large",
   },
   {
-    image: "https://picsum.photos/800/600?random=2",
-    title: "Together Forever 💕",
-    description: "Every picture tells a story that words never can.",
+    image: albumImage,
     tag: "Chapter II",
+    title: "A Smile Worth Remembering",
+    description:
+      "Some smiles stay in the heart long after the moment has passed.",
+    position: "memory-gallery__item--tall",
   },
   {
-    image: "https://picsum.photos/800/600?random=3",
-    title: "Beautiful Memories 📸",
-    description: "The best moments become our favorite memories.",
+    image: albumImage,
     tag: "Chapter III",
+    title: "Our Little Universe",
+    description:
+      "A small moment, but one that made the whole world feel brighter.",
+    position: "memory-gallery__item--standard",
+  },
+  {
+    image: albumImage,
+    tag: "Chapter IV",
+    title: "The Journey Together",
+    description:
+      "Every road became special because I was travelling through it with you.",
+    position: "memory-gallery__item--wide",
+  },
+  {
+    image: albumImage,
+    tag: "Chapter V",
+    title: "The Memory I Keep",
+    description:
+      "A photograph captures the moment, but my heart remembers everything.",
+    position: "memory-gallery__item--standard",
   },
 ];
 
 function MemoryGallery() {
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <div className="relative mx-auto max-w-7xl px-6 py-12">
-      
-      {/* Section Header */}
-      <div className="text-center mb-20">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1 }}
-          className="mb-4 inline-flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 px-5 py-2 backdrop-blur-xl shadow-[0_0_20px_rgba(244,63,94,0.2)]"
-        >
-          <span className="h-2 w-2 rounded-full bg-pink-400 animate-ping" />
-          <span className="text-xs uppercase tracking-[6px] text-pink-200 font-medium">
-            Immersive Gallery
-          </span>
-        </motion.div>
-
-        <motion.h2 
-          initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2, delay: 0.2 }}
-          className="text-4xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-pink-500 tracking-tight"
-        >
-          Beautiful Memories 📸
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2, delay: 0.4 }}
-          className="mt-4 text-base sm:text-lg text-pink-100/70 font-light italic"
-        >
-          Click any frame to step inside our cinematic universe.
-        </motion.p>
-      </div>
-
-      {/* Unique Cinematic Grid Layout */}
-      <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+    <>
+      <div className="memory-gallery">
         {memories.map((memory, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 50, filter: "blur(10px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: index * 0.2, ease: "easeOut" }}
+          <motion.button
+            key={`${memory.tag}-${index}`}
+            type="button"
+            className={`memory-gallery__item ${memory.position}`}
             onClick={() => setSelectedIndex(index)}
-            className="group relative cursor-pointer"
+            aria-label={`Open ${memory.title}`}
+            initial={
+              reduceMotion
+                ? false
+                : {
+                    opacity: 0,
+                    y: 55,
+                    scale: 0.96,
+                    filter: "blur(10px)",
+                  }
+            }
+            whileInView={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              filter: "blur(0px)",
+            }}
+            viewport={{
+              once: true,
+              amount: 0.2,
+            }}
+            transition={{
+              duration: 0.9,
+              delay: index * 0.08,
+              ease: cinematicEase,
+            }}
+            whileHover={
+              reduceMotion
+                ? undefined
+                : {
+                    y: -8,
+                  }
+            }
           >
-            {/* Outer Glowing Holographic Border Wrapper */}
-            <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-b from-pink-500/40 via-purple-500/20 to-transparent opacity-50 blur-sm group-hover:opacity-100 transition duration-700 pointer-events-none" />
+            <div className="memory-gallery__image-wrap">
+              <motion.img
+                src={memory.image}
+                alt={memory.title}
+                loading="lazy"
+                className="memory-gallery__image"
+                whileHover={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        scale: 1.07,
+                      }
+                }
+                transition={{
+                  duration: 0.8,
+                  ease: cinematicEase,
+                }}
+              />
 
-            <div className="relative rounded-3xl border border-pink-500/25 bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950/95 p-4 backdrop-blur-2xl shadow-[0_0_40px_rgba(244,63,94,0.15)] overflow-hidden">
-              
-              {/* Chapter Tag Badge */}
-              <div className="absolute top-7 left-7 z-20 inline-flex items-center gap-1.5 rounded-full border border-pink-500/30 bg-slate-950/70 px-3 py-1 backdrop-blur-md text-[10px] uppercase tracking-[3px] text-pink-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-pulse" />
+              <div
+                className="memory-gallery__shade"
+                aria-hidden="true"
+              />
+
+              <span className="memory-gallery__tag">
                 {memory.tag}
-              </div>
+              </span>
 
-              {/* Memory Card Container with Smooth Hover Scale */}
-              <div className="overflow-hidden rounded-2xl transition-transform duration-700 group-hover:scale-[1.02]">
-                <MemoryCard
-                  image={memory.image}
-                  title={memory.title}
-                  description={memory.description}
-                />
-              </div>
-
-              {/* Bottom Subtle Shimmer Accent */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-pink-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <span
+                className="memory-gallery__view"
+                aria-hidden="true"
+              >
+                View memory
+              </span>
             </div>
-          </motion.div>
+
+            <div className="memory-gallery__copy">
+              <span className="memory-gallery__number">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+
+              <div>
+                <h3>{memory.title}</h3>
+                <p>{memory.description}</p>
+              </div>
+            </div>
+          </motion.button>
         ))}
       </div>
 
@@ -110,7 +150,7 @@ function MemoryGallery() {
         selectedIndex={selectedIndex}
         setSelectedIndex={setSelectedIndex}
       />
-    </div>
+    </>
   );
 }
 

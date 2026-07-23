@@ -1,0 +1,275 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+const navigationItems = [
+  {
+    id: "home",
+    label: "Home",
+  },
+  {
+    id: "story",
+    label: "Our Story",
+  },
+  {
+    id: "memories",
+    label: "Memories",
+  },
+  {
+    id: "journey",
+    label: "Our Journey",
+  },
+  {
+    id: "letter",
+    label: "Love Letter",
+  },
+  {
+    id: "birthday",
+    label: "Birthday",
+  },
+  {
+    id: "surprise",
+    label: "Surprise",
+  },
+  {
+    id: "music",
+    label: "Music",
+  },
+];
+
+export default function Navbar() {
+  const menuRef = useRef(null);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] =
+    useState("home");
+  const [scrolled, setScrolled] = useState(false);
+
+  const scrollToSection = (sectionId) => {
+    const section =
+      document.getElementById(sectionId);
+
+    if (!section) {
+      console.warn(
+        `Navbar could not find section with id="${sectionId}"`,
+      );
+
+      setMenuOpen(false);
+      return;
+    }
+
+    const navbar =
+      document.querySelector(".birthday-navbar");
+
+    const navbarHeight =
+      navbar?.getBoundingClientRect().height ?? 64;
+
+    const sectionTop =
+      section.getBoundingClientRect().top +
+      window.scrollY -
+      navbarHeight;
+
+    window.scrollTo({
+      top: sectionTop,
+      behavior: "smooth",
+    });
+
+    setActiveSection(sectionId);
+    setMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 24);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const sections = navigationItems
+      .map((item) =>
+        document.getElementById(item.id),
+      )
+      .filter(Boolean);
+
+    if (!sections.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (first, second) =>
+              second.intersectionRatio -
+              first.intersectionRatio,
+          );
+
+        if (visibleEntries.length > 0) {
+          setActiveSection(
+            visibleEntries[0].target.id,
+          );
+        }
+      },
+      {
+        root: null,
+        rootMargin: "-25% 0px -60% 0px",
+        threshold: [0.05, 0.15, 0.3, 0.5],
+      },
+    );
+
+    sections.forEach((section) => {
+      observer.observe(section);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener(
+      "pointerdown",
+      handleOutsideClick,
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleEscape,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        handleOutsideClick,
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleEscape,
+      );
+    };
+  }, []);
+
+  return (
+    <header
+      className={`birthday-navbar ${
+        scrolled
+          ? "birthday-navbar--scrolled"
+          : ""
+      }`}
+      ref={menuRef}
+    >
+      <nav
+        className="birthday-navbar__inner"
+        aria-label="Birthday website navigation"
+      >
+        <button
+          type="button"
+          className={`birthday-navbar__menu-button ${
+            menuOpen ? "is-open" : ""
+          }`}
+          onClick={() =>
+            setMenuOpen((current) => !current)
+          }
+          aria-expanded={menuOpen}
+          aria-controls="birthday-navigation-links"
+          aria-label={
+            menuOpen
+              ? "Close navigation menu"
+              : "Open navigation menu"
+          }
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <button
+          type="button"
+          className="birthday-navbar__brand"
+          onClick={() => scrollToSection("home")}
+          aria-label="Go to the beginning"
+        >
+          <span className="birthday-navbar__brand-mark">
+            T
+          </span>
+
+          <span className="birthday-navbar__brand-text">
+            Our Story
+          </span>
+        </button>
+
+        <div
+          id="birthday-navigation-links"
+          className={`birthday-navbar__links ${
+            menuOpen ? "is-open" : ""
+          }`}
+        >
+          {navigationItems.map((item) => {
+            const isActive =
+              activeSection === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`birthday-navbar__link ${
+                  isActive ? "is-active" : ""
+                }`}
+                onClick={() =>
+                  scrollToSection(item.id)
+                }
+                aria-current={
+                  isActive ? "page" : undefined
+                }
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className="birthday-navbar__love-button"
+          onClick={() =>
+            scrollToSection("surprise")
+          }
+          aria-label="Open the surprise section"
+        >
+          <span aria-hidden="true">♥</span>
+          <span>For You</span>
+        </button>
+      </nav>
+    </header>
+  );
+}

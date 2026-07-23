@@ -1,0 +1,11 @@
+import MemoryTyper from "../typewriter/MemoryTyper";
+
+function JourneySection() {
+  return (
+    <section className="min-h-screen flex items-center justify-center bg-transparent px-6">
+      <MemoryTyper />
+    </section>
+  );
+}
+
+export default JourneySection;

@@ -5,7 +5,7 @@ function FooterSection() {
   return (
     <footer 
       id="footer"
-      className="relative min-h-screen w-full bg-slate-950 px-6 py-28 flex flex-col items-center justify-center overflow-hidden"
+      className="relative min-h-screen w-full bg-transparent px-6 py-28 flex flex-col items-center justify-center overflow-hidden"
     >
       {/* Cinematic Deep Radial Vignette & Romantic Glow Backdrops */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.22)_0%,rgba(168,85,247,0.1)_50%,transparent_80%)] pointer-events-none z-0" />

@@ -1,0 +1,53 @@
+import { lazy, Suspense } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
+import EntryPage from "./pages/EntryPage";
+
+const StoryPage = lazy(() => import("./pages/StoryPage"));
+
+function StoryPageLoader() {
+  return (
+    <div className="story-route-loader">
+      <div className="story-route-loader__glow" />
+
+      <div className="story-route-loader__content">
+        <span className="story-route-loader__eyebrow">
+          Preparing something beautiful
+        </span>
+
+        <div className="story-route-loader__line">
+          <span />
+        </div>
+
+        <p>Loading our story…</p>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<StoryPageLoader />}>
+        <Routes>
+          <Route path="/" element={<EntryPage />} />
+
+          <Route
+            path="/story"
+            element={<StoryPage />}
+          />
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}

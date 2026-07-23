@@ -1,110 +1,169 @@
-import { motion } from "framer-motion";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+} from "framer-motion";
+import { useRef } from "react";
+
+const cinematicEase = [0.16, 1, 0.3, 1];
 
 const events = [
   {
-    icon: "💬",
-    title: "First Conversation",
+    number: "01",
     date: "The day everything started",
-    subtitle: "A simple hello that changed entire galaxies.",
+    title: "First Conversation",
+    description:
+      "A simple hello became the beginning of something neither of us could have predicted.",
   },
   {
-    icon: "☕",
+    number: "02",
+    date: "A memory I will never forget",
     title: "First Meeting",
-    date: "A memory I'll never forget",
-    subtitle: "Time stood still the moment our eyes met.",
+    description:
+      "For a moment, everything around us disappeared and the world felt beautifully quiet.",
   },
   {
-    icon: "💖",
-    title: "Fell in Love",
+    number: "03",
     date: "The happiest chapter of my life",
-    subtitle: "Every heartbeat since then whispers your name.",
+    title: "Falling in Love",
+    description:
+      "Somewhere between our conversations and shared smiles, you quietly became my favourite person.",
   },
   {
-    icon: "🎂",
-    title: "Your Birthday",
+    number: "04",
     date: "The reason for this surprise",
-    subtitle: "Celebrating the day an absolute masterpiece was born.",
+    title: "Your Birthday",
+    description:
+      "A celebration of the day this world received someone truly rare, beautiful, and unforgettable.",
   },
   {
-    icon: "♾️",
-    title: "Forever Together",
-    date: "Many more memories to come",
-    subtitle: "Hand in hand through every universe yet to be written.",
+    number: "05",
+    date: "The story still being written",
+    title: "Everything Ahead",
+    description:
+      "More journeys, more laughter, and countless memories are waiting for us in the chapters ahead.",
   },
 ];
 
 function Timeline() {
+  const timelineRef = useRef(null);
+  const reduceMotion = useReducedMotion();
+
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start 75%", "end 60%"],
+  });
+
+  const progressScale = useSpring(scrollYProgress, {
+    stiffness: 90,
+    damping: 26,
+    mass: 0.4,
+  });
+
   return (
-    <div className="relative mx-auto max-w-5xl px-4 py-12">
-      
-      {/* Central Glowing Energy Beam (Vertical Line) */}
-      <div className="absolute left-1/2 top-12 bottom-12 w-[2px] -translate-x-1/2 bg-gradient-to-b from-pink-500/0 via-pink-500/80 to-purple-600/0 shadow-[0_0_15px_rgba(244,63,94,0.8)]" />
-
-      <div className="relative space-y-24">
-        {events.map((event, index) => {
-          const isEven = index % 2 === 0;
-
-          return (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 60, filter: "blur(10px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 1, delay: 0.15 * index, ease: "easeOut" }}
-              className={`relative flex items-center justify-between ${
-                isEven ? "flex-row-reverse" : "flex-row"
-              }`}
-            >
-              
-              {/* Spacer for alternating layout on desktop */}
-              <div className="hidden md:block w-[42%]" />
-
-              {/* Glowing Center Core / Icon Node */}
-              <div className="absolute left-1/2 z-20 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border border-pink-500/50 bg-gradient-to-br from-slate-900 via-slate-950 to-pink-950 text-2xl shadow-[0_0_30px_rgba(244,63,94,0.6)] backdrop-blur-xl">
-                <span className="drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-                  {event.icon}
-                </span>
-                
-                {/* Pulsing ring aura */}
-                <div className="absolute inset-0 rounded-full border border-pink-400/40 animate-ping opacity-30 pointer-events-none" />
-              </div>
-
-              {/* Cinematic Glassmorphism Card */}
-              <div className="w-full md:w-[42%]">
-                <motion.div 
-                  whileHover={{ scale: 1.03, y: -5 }}
-                  transition={{ duration: 0.4 }}
-                  className="group relative rounded-3xl border border-pink-500/25 bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950/90 p-8 backdrop-blur-2xl shadow-[0_0_40px_rgba(244,63,94,0.15)] overflow-hidden text-left"
-                >
-                  {/* Hover ambient highlight */}
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,105,180,0.12)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-                  {/* Date Pill Tag */}
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 px-3.5 py-1 text-xs uppercase tracking-[3px] text-pink-200 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-pulse" />
-                    {event.date}
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-pink-400 tracking-tight">
-                    {event.title}
-                  </h3>
-
-                  {/* Subtitle / Description */}
-                  <p className="mt-3 text-sm sm:text-base text-pink-100/70 font-light italic leading-relaxed">
-                    "{event.subtitle}"
-                  </p>
-
-                  {/* Bottom decorative glowing accent line */}
-                  <div className="mt-6 h-[1px] w-full bg-gradient-to-r from-pink-500/40 via-purple-500/20 to-transparent" />
-                </motion.div>
-              </div>
-
-            </motion.div>
-          );
-        })}
+    <div ref={timelineRef} className="timeline">
+      <div className="timeline__track" aria-hidden="true">
+        <motion.span
+          className="timeline__progress"
+          style={{
+            scaleY: reduceMotion ? 1 : progressScale,
+          }}
+        />
       </div>
 
+      <ol className="timeline__list">
+        {events.map((event, index) => {
+          const isRight = index % 2 !== 0;
+
+          return (
+            <motion.li
+              key={event.number}
+              className={`timeline__event ${
+                isRight ? "timeline__event--right" : ""
+              }`}
+              initial={
+                reduceMotion
+                  ? false
+                  : {
+                      opacity: 0,
+                      y: 45,
+                      x: isRight ? 35 : -35,
+                      filter: "blur(8px)",
+                    }
+              }
+              whileInView={{
+                opacity: 1,
+                y: 0,
+                x: 0,
+                filter: "blur(0px)",
+              }}
+              viewport={{
+                once: true,
+                amount: 0.3,
+              }}
+              transition={{
+                duration: 0.9,
+                delay: index * 0.06,
+                ease: cinematicEase,
+              }}
+            >
+              <div className="timeline__node" aria-hidden="true">
+                <motion.span
+                  animate={
+                    reduceMotion
+                      ? undefined
+                      : {
+                          scale: [1, 1.16, 1],
+                          opacity: [0.65, 1, 0.65],
+                        }
+                  }
+                  transition={{
+                    duration: 3.2,
+                    repeat: Infinity,
+                    delay: index * 0.35,
+                    ease: "easeInOut",
+                  }}
+                />
+              </div>
+
+              <motion.article
+                className="timeline__card"
+                whileHover={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        y: -7,
+                      }
+                }
+                transition={{
+                  duration: 0.35,
+                  ease: cinematicEase,
+                }}
+              >
+                <div className="timeline__card-top">
+                  <span className="timeline__number">
+                    {event.number}
+                  </span>
+
+                  <span className="timeline__date">
+                    {event.date}
+                  </span>
+                </div>
+
+                <h3>{event.title}</h3>
+
+                <p>{event.description}</p>
+
+                <div
+                  className="timeline__card-line"
+                  aria-hidden="true"
+                />
+              </motion.article>
+            </motion.li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
