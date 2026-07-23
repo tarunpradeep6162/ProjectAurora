@@ -1,83 +1,97 @@
-import { motion } from "framer-motion";
-import LoadingBar from "./LoadingBar";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-function LoadingScreen({ progress }) {
+function LoadingScreen({ onComplete }) {
+  const [progress, setProgress] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    let currentProgress = 0;
+
+    const interval = window.setInterval(() => {
+      const increment = Math.floor(Math.random() * 8) + 3;
+
+      currentProgress = Math.min(currentProgress + increment, 100);
+      setProgress(currentProgress);
+
+      if (currentProgress >= 100) {
+        window.clearInterval(interval);
+
+        window.setTimeout(() => {
+          setVisible(false);
+
+          if (typeof onComplete === "function") {
+            onComplete();
+          }
+        }, 700);
+      }
+    }, 120);
+
+    // Emergency fallback so the website can never remain stuck.
+    const fallbackTimeout = window.setTimeout(() => {
+      window.clearInterval(interval);
+      setProgress(100);
+
+      window.setTimeout(() => {
+        setVisible(false);
+
+        if (typeof onComplete === "function") {
+          onComplete();
+        }
+      }, 400);
+    }, 8000);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(fallbackTimeout);
+    };
+  }, [onComplete]);
+
+  const safeProgress = Number.isFinite(progress)
+    ? Math.min(Math.max(Math.round(progress), 0), 100)
+    : 0;
+
   return (
-    <motion.div
-      className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center px-6 overflow-hidden"
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.05 }}
-      transition={{ duration: 0.8, ease: "easeInOut" }}
-    >
-      {/* Ambient Romantic Glow Orbs */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-pink-600/20 via-rose-500/15 to-purple-600/10 rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
-
-      {/* Cinematic Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(2,6,23,0.85)_90%,rgba(2,6,23,1)_100%)] pointer-events-none" />
-
-      {/* Main Content Container */}
-      <div className="relative z-10 flex flex-col items-center justify-center max-w-xl text-center">
-        
-        {/* Glowing Romantic Tagline Badge */}
+    <AnimatePresence>
+      {visible && (
         <motion.div
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          className="mb-4 inline-flex items-center gap-2 rounded-full border border-pink-500/30 bg-pink-500/10 px-4 py-1.5 backdrop-blur-md shadow-[0_0_15px_rgba(244,63,94,0.2)]"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#070506]"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-ping" />
-          <span className="text-[11px] uppercase tracking-[5px] text-pink-200 font-medium">
-            A Universe Crafted For You
-          </span>
+          <div className="w-full max-w-xl px-6 text-center">
+            <p className="mb-8 text-xs uppercase tracking-[0.5em] text-white/50">
+              A universe created for you
+            </p>
+
+            <h1 className="text-5xl font-semibold text-white sm:text-7xl">
+              Dheepika
+            </h1>
+
+            <h2 className="mt-2 text-4xl font-semibold text-white sm:text-6xl">
+              Chlmm 🤍 🩷
+            </h2>
+
+            <p className="mt-8 text-lg italic text-white/45">
+              Preparing something magical...
+            </p>
+
+            <div className="mt-12 h-px overflow-hidden bg-white/10">
+              <motion.div
+                className="h-full bg-white/70"
+                animate={{ width: `${safeProgress}%` }}
+                transition={{ duration: 0.15, ease: "linear" }}
+              />
+            </div>
+
+            <p className="mt-7 text-lg text-white/70">
+              {safeProgress}%
+            </p>
+          </div>
         </motion.div>
-
-        {/* Cinematic Glowing Title */}
-        <motion.h1
-          initial={{ opacity: 0, scale: 0.85, filter: "blur(10px)" }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1, 
-            filter: "blur(0px)",
-            textShadow: [
-              "0 0 20px rgba(255,255,255,0.2)",
-              "0 0 45px rgba(244,63,94,0.5)",
-              "0 0 20px rgba(255,255,255,0.2)"
-            ]
-          }}
-          transition={{ duration: 1.4, ease: "easeOut" }}
-          className="text-5xl sm:text-7xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-pink-500"
-        >
-          Dheepika Chlmm❤️  ❤️
-        </motion.h1>
-
-        {/* Romantic Pulsing Subtitle */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{
-            repeat: Infinity,
-            duration: 2.5,
-            ease: "easeInOut",
-          }}
-          className="mt-6 text-sm sm:text-base text-pink-200/70 font-light tracking-wide italic"
-        >
-          Preparing something magical...
-        </motion.p>
-
-        {/* Modernized Progress Bar Wrapper */}
-        <div className="w-72 sm:w-80 mt-10">
-          <LoadingBar progress={progress} />
-        </div>
-
-        {/* Percentage Counter with Cinematic Glow */}
-        <motion.div 
-          className="mt-4 text-pink-300 font-mono text-lg tracking-widest drop-shadow-[0_0_10px_rgba(244,63,94,0.6)]"
-        >
-          {progress}%
-        </motion.div>
-
-      </div>
-    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

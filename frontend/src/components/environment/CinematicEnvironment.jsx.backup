@@ -1,0 +1,25 @@
+import { Canvas } from "@react-three/fiber";
+import CinematicScene from "./CinematicScene";
+import useDeviceQuality from "./hooks/useDeviceQuality";
+
+function CinematicEnvironment() {
+  const quality = useDeviceQuality();
+
+  return (
+    <div className="fixed inset-0 z-[9999] pointer-events-none">
+      <Canvas
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        gl={{
+          alpha: true,
+          antialias: true,
+        }}
+      >
+        <color attach="background" args={["black"]} />
+
+        <CinematicScene quality={quality} />
+      </Canvas>
+    </div>
+  );
+}
+
+export default CinematicEnvironment;
