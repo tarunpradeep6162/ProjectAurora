@@ -7,7 +7,7 @@ function CinematicEnvironment() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] pointer-events-none"
+className="fixed inset-0 z-0 pointer-events-none"
       style={{
         width: "100vw",
         height: "100vh",
