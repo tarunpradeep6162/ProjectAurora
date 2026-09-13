@@ -1,0 +1,362 @@
+@import "tailwindcss";
+
+:root {
+  /* Aurora palette — exact tokens from the creative brief. Candlelight, not
+     jewelry-ad shine: gold and champagne stay muted, never pure #000/#fff. */
+  --aurora-black: #070706;
+  --aurora-night: #0c0b09;
+  --aurora-warm-black: #12100d;
+  --aurora-ivory: #f1ece3;
+  --aurora-cream: #ddd3c5;
+  --aurora-gold: #d7b97a;
+  --aurora-champagne: #c8a86a;
+  --aurora-bronze: #8d7147;
+
+  --background: var(--aurora-night);
+  --background-deep: var(--aurora-black);
+  --foreground: var(--aurora-ivory);
+  --foreground-muted: var(--aurora-cream);
+  --accent: var(--aurora-gold);
+  --accent-soft: var(--aurora-champagne);
+  --accent-rose: #b98577; /* dusty rose — used sparingly, candlelight only */
+  --line: rgba(215, 185, 122, 0.22);
+
+  --font-display: var(--font-cormorant);
+  --font-body: var(--font-jost);
+
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-expo-out: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-soft: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  --dur-slow: 1.4s;
+  --dur-med: 0.9s;
+  --dur-fast: 0.4s;
+
+  /* --- Cosmic grading + scene transitions -------------------------------
+     Written every scroll update by CosmicAtmosphere (see grade.ts). The
+     values below are the chapter-01 stop, so the sky is already correctly
+     dark on first paint and stays correct if JavaScript never runs at all. */
+  --grade-base: #050506;
+  --grade-glow: #2a2118;
+  --grade-glow-strength: 0.5;
+  --grade-quiet: 0.15;
+  --grain-scale: 1;
+
+  /* 0-1 weights, each peaking on one chapter boundary. */
+  --seam-constellation: 0;
+  --seam-inward: 0;
+  --seam-lastlight: 0;
+  --seam-lastlight-drift: 0;
+}
+
+/* ------------------------------------------------------------------------
+   Stacking order for the whole site, in one place:
+
+     -3  .cosmic-sky        graded CSS sky (also the complete WebGL fallback)
+     -2  cosmic <canvas>    WebGL starfield / nebula / moons
+     -1  .cosmic-path       journey dust, anchored inside chapter 04
+      0  chapter sections + their photography
+     10  chapter text content (per-section)
+     40  chapter progress dots
+     45  .last-light        letter -> candle transition veil
+     50  chapters & accessibility panel
+     59  .vignette
+     60  .film-grain
+
+   Everything at 45 and above is pointer-events: none except the nav itself.
+   ---------------------------------------------------------------------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-deep: var(--background-deep);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-rose: var(--accent-rose);
+  --color-line: var(--line);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The one guaranteed-opaque dark base for the whole document. A background
+   on the root element is propagated to the canvas and painted before every
+   stacking layer, including negative z-index ones — so if WebGL is
+   unavailable, gated off, or its context is lost mid-visit, the worst case
+   is still deep obsidian and never the browser's default white. */
+html {
+  background: var(--aurora-black);
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Deliberately transparent: `body` is a positioned (z-index: auto) box, so
+   an opaque background here would paint *after* — and therefore on top of —
+   every negative z-index layer, hiding the cosmic sky and the WebGL canvas
+   entirely. The dark base lives on `html` above instead. */
+body {
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-body), sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ---------------------------------------------------------------- sky --- */
+
+.cosmic-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background-color: var(--grade-base);
+}
+
+.cosmic-sky > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.cosmic-sky__glow {
+  opacity: var(--grade-glow-strength, 0.5);
+  background-image:
+    radial-gradient(ellipse 130% 85% at 50% -18%, var(--grade-glow), transparent 62%),
+    radial-gradient(ellipse 105% 75% at 14% 112%, var(--grade-glow), transparent 58%);
+}
+
+/* The letter chapter's warmth bleeding backwards into the photographs that
+   precede it — the "external universe becoming internal" turn. */
+.cosmic-sky__warm {
+  opacity: calc(var(--seam-inward, 0) * 0.6);
+  background-image: radial-gradient(
+    ellipse 95% 65% at 50% 68%,
+    rgba(124, 88, 52, 0.5),
+    transparent 66%
+  );
+}
+
+/* Static CSS starfield. Hidden while the WebGL canvas is carrying the sky,
+   raised whenever it is not (reduced motion, low-end gating, no WebGL, or a
+   lost context) so the backdrop never degrades to a flat colour. */
+.cosmic-sky__stars {
+  opacity: 0;
+  transition: opacity 1200ms var(--ease-soft);
+  background-repeat: repeat;
+  background-size: 640px 640px;
+  background-image:
+    radial-gradient(1.3px 1.3px at 8% 14%, rgba(241, 236, 227, 0.6), transparent 62%),
+    radial-gradient(1px 1px at 23% 47%, rgba(215, 185, 122, 0.45), transparent 62%),
+    radial-gradient(1.6px 1.6px at 37% 9%, rgba(241, 236, 227, 0.5), transparent 62%),
+    radial-gradient(1px 1px at 51% 63%, rgba(221, 211, 197, 0.4), transparent 62%),
+    radial-gradient(1.2px 1.2px at 66% 26%, rgba(215, 185, 122, 0.5), transparent 62%),
+    radial-gradient(1px 1px at 78% 81%, rgba(241, 236, 227, 0.38), transparent 62%),
+    radial-gradient(1.5px 1.5px at 91% 38%, rgba(221, 211, 197, 0.52), transparent 62%),
+    radial-gradient(1px 1px at 15% 88%, rgba(215, 185, 122, 0.36), transparent 62%),
+    radial-gradient(1.1px 1.1px at 44% 92%, rgba(241, 236, 227, 0.34), transparent 62%),
+    radial-gradient(1px 1px at 60% 5%, rgba(221, 211, 197, 0.42), transparent 62%),
+    radial-gradient(1.4px 1.4px at 85% 58%, rgba(241, 236, 227, 0.3), transparent 62%),
+    radial-gradient(1px 1px at 30% 72%, rgba(215, 185, 122, 0.3), transparent 62%);
+}
+
+/* Held well below full strength on purpose. These stars are visible from
+   first paint (before the canvas has mounted) and cross-fade out once it
+   has, so for a moment both are on screen; at full opacity that moment read
+   as a density spike. It also means that anywhere the cross-fade cannot run
+   — an environment with a stalled frame loop, where CSS transitions never
+   advance — the frozen state is still a correct-looking sky rather than a
+   blank one. This layer can never leave the backdrop empty. */
+:root:not([data-webgl="on"]) .cosmic-sky__stars {
+  opacity: calc(0.72 - var(--grade-quiet, 0) * 0.32);
+}
+
+/* --------------------------------------------------- scene transitions --- */
+
+/* Letter -> Candle. The frame darkens almost completely as the boundary
+   between the two chapters crosses the viewport centre, leaving one soft
+   warm point of light drifting down to exactly where the flames are about
+   to be. Peaks on the seam and is back to zero before either chapter's own
+   text is centred, so it never sits over anything being read. */
+.last-light {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  opacity: var(--seam-lastlight, 0);
+  background-image: radial-gradient(
+    circle at 50% calc(50% + var(--seam-lastlight-drift, 0) * 9%),
+    rgba(4, 4, 3, 0) 0%,
+    rgba(4, 4, 3, 0.55) 22%,
+    rgba(3, 3, 2, 0.93) 56%,
+    rgba(2, 2, 2, 0.97) 100%
+  );
+}
+
+.last-light__flame {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--seam-lastlight-drift, 0) * 9%);
+  width: 34vmin;
+  height: 34vmin;
+  transform: translate(-50%, -50%)
+    scale(calc(0.62 + var(--seam-lastlight, 0) * 0.42));
+  background-image: radial-gradient(
+    circle,
+    rgba(231, 199, 132, 0.4) 0%,
+    rgba(215, 185, 122, 0.14) 34%,
+    transparent 70%
+  );
+}
+
+/* ------------------------------------------------------- cosmic path --- */
+
+/* Anchored inside chapter 04 but bleeding past both of its edges, so the
+   dust arrives before the chapter does and is still thinning out after it.
+   z-index -1 keeps it above the canvas and below every word on the page. */
+.cosmic-path {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -30vh;
+  bottom: -24vh;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--path-in, 0);
+}
+
+.cosmic-path__curve {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.09;
+}
+
+.cosmic-path__dust {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  opacity: var(--o, 0.3);
+  /* At the chapter 03/04 seam `--seam-constellation` is 1 and every point
+     collapses onto the line; through the chapter it falls back to 0 and
+     they scatter into dust. */
+  transform: translate(-50%, -50%)
+    translateY(calc(var(--dy, 0vh) * (1 - var(--seam-constellation, 0))));
+}
+
+.cosmic-path__dust--memory {
+  opacity: calc(0.26 + var(--m, 0) * 0.54);
+  box-shadow: 0 0 calc(3px + var(--m, 0) * 8px)
+    rgba(215, 185, 122, calc(0.2 + var(--m, 0) * 0.3));
+}
+
+/* The gold signature settling as the letter is left behind. */
+.letter-signature {
+  text-shadow: 0 0 calc(24px * (1 - var(--seam-lastlight, 0)))
+    rgba(215, 185, 122, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .last-light {
+    display: none;
+  }
+  .letter-signature {
+    text-shadow: none;
+  }
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display), serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--background-deep);
+}
+
+/* Visible focus states for keyboard navigation */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Film grain overlay — subtle atmospheric texture.
+   Scaled down globally after the cosmic expansion (grain + stars + nebula +
+   glow stacked together turned to mush), and scaled down *further* by
+   `--grain-scale` over the chapters that hold real photographs, where the
+   photograph has to stay the sharpest thing on screen. */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: calc(0.022 * var(--grain-scale, 1));
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.mask-line {
+  overflow: hidden;
+  display: block;
+}
+
+.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
