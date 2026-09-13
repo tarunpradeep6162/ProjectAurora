@@ -1,18 +1,30 @@
 /**
  * Site-wide cosmic colour grading.
  *
- * One stop per chapter, interpolated by `SceneProgressRef.storyPosition`
- * (a steady one-eighth of the range per chapter) rather than by raw
- * document scroll — so every stop-to-stop blend is spread across at least
- * the back half of one chapter plus the front half of the next, i.e. never
- * less than a full viewport height and, across the two pinned chapters,
- * several. There is no keyframe or class switch anywhere in this path: the
- * only thing that ever happens is a linear RGB lerp between neighbouring
- * stops, which is what keeps the mood shift from reading as a gradient
- * "changing over" at some particular scroll position.
+ * One stop per chapter, interpolated by `SceneProgressRef.storyPosition`.
+ * There is no keyframe or class switch anywhere in this path: the only thing
+ * that ever happens is a linear RGB lerp between neighbouring stops, which is
+ * what keeps the mood shift from reading as a gradient "changing over" at
+ * some particular scroll position.
+ *
+ * Where each stop sits. `storyPosition` is `(chapterIndex + chapterProgress)
+ * / (chapters - 1)`, so a stop placed at `k / (chapters - 1)` is only reached
+ * at the very *start* of chapter k and is already blending away by the time
+ * that chapter's content is centred — which is what this table used to do,
+ * and why a photograph or the candle never actually sat under its own
+ * chapter's grade. Stops are now anchored *inside* their chapter: by default
+ * at its centre, or held flat across a `hold` range of that chapter's own
+ * progress where a photograph, a body of text or the flame owns the screen.
+ * The last chapter is the exception: `storyPosition` saturates at 1 as soon
+ * as it begins, so its stop is anchored at 1.
+ *
+ * `quiet` is the one "step the sky back" control for the whole cosmos. The
+ * starfield, nebula, moons, cosmic path and CSS fallback stars all read it —
+ * nothing keeps a parallel brightness table — so "when a photo or text owns
+ * the screen, the galaxy behind it dims" is expressed here, once, per chapter.
  *
  * The same function feeds both the CSS atmosphere layer (DOM custom
- * properties) and the WebGL fog/nebula, so the two can never disagree
+ * properties) and the WebGL fog/nebula/moons, so the two can never disagree
  * about what colour the universe currently is.
  */
 
@@ -24,32 +36,71 @@ export type GradeStop = {
   /** 0-1 strength of that bloom. */
   glowStrength: number;
   /**
-   * 0-1 "quiet the sky down" amount: dims and slows the starfield. Highest
-   * where a photograph or a flame should be the only thing being looked at.
+   * 0-1 "quiet the sky down" amount: dims (and slows) every cosmic layer.
+   * Highest where a photograph, the letter or a flame should be the only
+   * thing being looked at.
    */
   quiet: number;
   /** 0-1 multiplier on the film-grain overlay; lowered over photography. */
   grain: number;
+  /**
+   * Range of this chapter's own progress (0-1) across which the stop is held
+   * exactly, before blending toward its neighbours. Defaults to the chapter
+   * centre, `[0.5, 0.5]`. Ignored for the last chapter (see above). Keep holds
+   * narrow enough that every blend still spans roughly a viewport of scroll.
+   */
+  hold?: readonly [number, number];
 };
 
 /** Ordered to match `chapters` in `@/lib/content` exactly. */
 export const GRADE_STOPS: GradeStop[] = [
-  // 01 portal — opening black, sparse stars.
+  // 01 portal — opening black, sparse stars: the galaxy's edge.
   { base: "#050506", glow: "#2a2118", glowStrength: 0.5, quiet: 0.15, grain: 1 },
-  // 02 miracle — early memories, warm brown-black. Holds a real photograph.
-  { base: "#0d0a07", glow: "#3a2a18", glowStrength: 0.46, quiet: 0.3, grain: 0.55 },
-  // 03 story — the Memory Constellation: slightly more celestial structure.
+  // 02 miracle — early memories, warm brown-black. A real photograph sits
+  // behind the heading for the middle of the chapter.
+  {
+    base: "#0d0a07",
+    glow: "#3a2a18",
+    glowStrength: 0.46,
+    quiet: 0.36,
+    grain: 0.55,
+    hold: [0.4, 0.6],
+  },
+  // 03 story — the timeline and its constellation: more celestial structure.
   { base: "#080a12", glow: "#23304a", glowStrength: 0.44, quiet: 0.1, grain: 0.9 },
   // 04 journey — night indigo, the deepest "travelling" colour.
   { base: "#06070f", glow: "#1a2036", glowStrength: 0.5, quiet: 0.18, grain: 0.85 },
-  // 05 memories — deliberately neutral and quiet: the photographs are the
-  // subject here, so the sky steps back rather than tinting them.
-  { base: "#080807", glow: "#221c14", glowStrength: 0.26, quiet: 0.5, grain: 0.3 },
-  // 06 letter — calmer, warmer black; the universe turning inward.
-  { base: "#0e0b08", glow: "#3a2a1b", glowStrength: 0.5, quiet: 0.62, grain: 0.75 },
+  // 05 memories — deliberately neutral and quiet: full-frame photographs are
+  // the subject for almost the whole pinned chapter, so the sky steps back
+  // across that whole stretch rather than peaking at one point in it.
+  {
+    base: "#080807",
+    glow: "#221c14",
+    glowStrength: 0.26,
+    quiet: 0.6,
+    grain: 0.3,
+    hold: [0.15, 0.85],
+  },
+  // 06 letter — calmer, warmer black; the universe turning inward while a
+  // body of text is being read.
+  {
+    base: "#0e0b08",
+    glow: "#3a2a1b",
+    glowStrength: 0.5,
+    quiet: 0.66,
+    grain: 0.75,
+    hold: [0.3, 0.7],
+  },
   // 07 birthday — near-total darkness, so one flame can carry the frame.
-  { base: "#040403", glow: "#1e1408", glowStrength: 0.24, quiet: 0.55, grain: 0.6 },
-  // 08 finale — obsidian and Aurora gold.
+  {
+    base: "#040403",
+    glow: "#1e1408",
+    glowStrength: 0.24,
+    quiet: 0.8,
+    grain: 0.6,
+    hold: [0.35, 0.5],
+  },
+  // 08 finale — obsidian and Aurora gold; the sky opening back up.
   { base: "#070605", glow: "#4a3720", glowStrength: 0.6, quiet: 0.2, grain: 0.9 },
 ];
 
@@ -59,9 +110,28 @@ export type Grade = {
   glowStrength: number;
   quiet: number;
   grain: number;
-  /** Linear components of `base`, for the WebGL fog. */
+  /** 0-255 sRGB components of `base`, for the WebGL fog. */
   baseRgb: [number, number, number];
 };
+
+/**
+ * Non-allocating grade sample for per-frame WebGL consumers. Fill one of
+ * these once (see `createGradeSample`) and pass it to `sampleGrade` every
+ * frame instead of calling `gradeAt`, which has to build strings for CSS.
+ */
+export type GradeSample = {
+  quiet: number;
+  glowStrength: number;
+  grain: number;
+  /** 0-255 sRGB components of `base`. */
+  baseR: number;
+  baseG: number;
+  baseB: number;
+};
+
+export function createGradeSample(): GradeSample {
+  return { quiet: 0, glowStrength: 0, grain: 0, baseR: 0, baseG: 0, baseB: 0 };
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
@@ -72,8 +142,8 @@ function mix(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function rgbString(rgb: [number, number, number]) {
-  return `rgb(${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])})`;
+function rgbString(r: number, g: number, b: number) {
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 }
 
 const RGB_STOPS = GRADE_STOPS.map((s) => ({
@@ -81,19 +151,91 @@ const RGB_STOPS = GRADE_STOPS.map((s) => ({
   glow: hexToRgb(s.glow),
 }));
 
+const LAST = GRADE_STOPS.length - 1;
+
+/** Story-position anchors of each stop's hold range (see the header comment). */
+const HOLD_START = GRADE_STOPS.map((s, k) =>
+  k === LAST ? 1 : (k + (s.hold?.[0] ?? 0.5)) / LAST
+);
+const HOLD_END = GRADE_STOPS.map((s, k) =>
+  k === LAST ? 1 : (k + (s.hold?.[1] ?? 0.5)) / LAST
+);
+
 /**
- * Interpolate the grade at a 0-1 story position. Linear (not eased)
- * between stops on purpose — easing would concentrate the change into the
- * middle of each blend, which is exactly the visible "switch" this is
- * meant to avoid.
+ * Story position at which a chapter's content is centred — the same anchor
+ * the grade stops use by default. Exported so other authored tables (the
+ * camera arc in CosmicScene) key their stops to exactly the same moments.
+ */
+export function chapterAnchor(index: number): number {
+  if (index >= LAST) return 1;
+  return Math.max(0, (index + 0.5) / LAST);
+}
+
+/** Scratch result of `locate`, reused so lookups never allocate. */
+const loc = { i: 0, j: 0, t: 0 };
+
+function locate(position: number) {
+  const p = Math.min(1, Math.max(0, position));
+  loc.i = LAST;
+  loc.j = LAST;
+  loc.t = 0;
+  for (let k = 0; k <= LAST; k++) {
+    if (p <= HOLD_END[k]) {
+      if (k === 0 || p >= HOLD_START[k]) {
+        loc.i = k;
+        loc.j = k;
+        loc.t = 0;
+      } else {
+        const span = Math.max(1e-6, HOLD_START[k] - HOLD_END[k - 1]);
+        loc.i = k - 1;
+        loc.j = k;
+        loc.t = (p - HOLD_END[k - 1]) / span;
+      }
+      break;
+    }
+  }
+  return loc;
+}
+
+/** Fill `out` with the grade at a 0-1 story position. Allocation-free. */
+export function sampleGrade(position: number, out: GradeSample): GradeSample {
+  const { i, j, t } = locate(position);
+  const a = GRADE_STOPS[i];
+  const b = GRADE_STOPS[j];
+  const ra = RGB_STOPS[i].base;
+  const rb = RGB_STOPS[j].base;
+  out.quiet = mix(a.quiet, b.quiet, t);
+  out.glowStrength = mix(a.glowStrength, b.glowStrength, t);
+  out.grain = mix(a.grain, b.grain, t);
+  out.baseR = mix(ra[0], rb[0], t);
+  out.baseG = mix(ra[1], rb[1], t);
+  out.baseB = mix(ra[2], rb[2], t);
+  return out;
+}
+
+/** Just the quiet amount at a 0-1 story position. Allocation-free. */
+export function quietAt(position: number): number {
+  const { i, j, t } = locate(position);
+  return mix(GRADE_STOPS[i].quiet, GRADE_STOPS[j].quiet, t);
+}
+
+let memoPosition = Number.NaN;
+let memoGrade: Grade | null = null;
+
+/**
+ * Interpolate the grade at a 0-1 story position. Linear (not eased) between
+ * stops on purpose — easing would concentrate the change into the middle of
+ * each blend, which is exactly the visible "switch" this is meant to avoid.
+ *
+ * Memoized on the position: some callers (the starfield) ask every frame,
+ * while the position only changes on scroll, so repeated calls return the
+ * same object instead of rebuilding strings and arrays 60 times a second.
+ * Treat the result as read-only.
  */
 export function gradeAt(position: number): Grade {
-  const last = GRADE_STOPS.length - 1;
-  const p = Math.min(1, Math.max(0, position)) * last;
-  const i = Math.min(last, Math.floor(p));
-  const j = Math.min(last, i + 1);
-  const t = p - i;
+  if (memoGrade && position === memoPosition) return memoGrade;
 
+  const { i, j, t } = locate(position);
   const a = GRADE_STOPS[i];
   const b = GRADE_STOPS[j];
   const ra = RGB_STOPS[i];
@@ -104,18 +246,19 @@ export function gradeAt(position: number): Grade {
     mix(ra.base[1], rb.base[1], t),
     mix(ra.base[2], rb.base[2], t),
   ];
-  const glowRgb: [number, number, number] = [
-    mix(ra.glow[0], rb.glow[0], t),
-    mix(ra.glow[1], rb.glow[1], t),
-    mix(ra.glow[2], rb.glow[2], t),
-  ];
 
-  return {
-    base: rgbString(baseRgb),
-    glow: rgbString(glowRgb),
+  memoPosition = position;
+  memoGrade = {
+    base: rgbString(baseRgb[0], baseRgb[1], baseRgb[2]),
+    glow: rgbString(
+      mix(ra.glow[0], rb.glow[0], t),
+      mix(ra.glow[1], rb.glow[1], t),
+      mix(ra.glow[2], rb.glow[2], t)
+    ),
     glowStrength: mix(a.glowStrength, b.glowStrength, t),
     quiet: mix(a.quiet, b.quiet, t),
     grain: mix(a.grain, b.grain, t),
     baseRgb,
   };
+  return memoGrade;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { readSceneProgress, subscribeSceneFrame } from "./sceneProgress";
 import { timeline } from "@/lib/content";
 
@@ -28,7 +28,7 @@ function curveAt(x: number): number {
       return y1 + (y2 - y1) * s;
     }
   }
-  return ANCHORS[ANCHORS.length - 1][1];
+  return x < ANCHORS[0][0] ? ANCHORS[0][1] : ANCHORS[ANCHORS.length - 1][1];
 }
 
 /** Small deterministic PRNG — stable dust between renders, no hydration risk. */
@@ -40,61 +40,77 @@ function makeRandom(seed: number) {
   };
 }
 
-type Particle = {
+type Mote = {
   x: number;
   y: number;
   /**
    * Scatter offset from the curve, in `vh`. Deliberately a viewport unit
    * rather than a percentage: it is applied through `transform`, where a
-   * percentage would resolve against the 1-3px particle itself instead of
+   * percentage would resolve against the 1-3px mote itself instead of
    * against the layer. Keeping it in `transform` means the convergence
-   * costs no layout for any of the ~47 particles.
+   * costs no layout.
    */
   dy: number;
   size: number;
   opacity: number;
   warm: boolean;
-  /** 0-4 for the five particles that stand in for the five real moments. */
+  kind: "memory" | "wake" | "ambient";
+  /** Which of the five real moments this mote belongs to (memory + wake). */
   memory: number | null;
 };
 
-const DUST_COUNT = 42;
+/** Motes trailing behind each remembered moment. */
+const WAKE_PER_MEMORY = 4;
+/** Loose, faint dust around the whole band. */
+const AMBIENT_COUNT = 9;
 
-function buildParticles(): Particle[] {
+function buildMotes(): Mote[] {
   const rand = makeRandom(20251125);
-  const out: Particle[] = [];
+  const out: Mote[] = [];
 
-  for (let i = 0; i < DUST_COUNT; i++) {
-    const x = rand() * 100;
-    const spread = 1.5 + rand() * 11;
-    const dy = (rand() < 0.5 ? -1 : 1) * spread;
+  timeline.forEach((_, i) => {
+    const x = 6 + i * 22;
+
+    // The moment itself: slightly larger and warmer, sitting exactly on the
+    // curve, brightening as the visitor passes its part of the chapter. No
+    // text is ever drawn here — the words live in the DOM, in chapter 03.
+    out.push({ x, y: curveAt(x), dy: 0, size: 2.6, opacity: 0.3, warm: true, kind: "memory", memory: i });
+
+    // Its wake: a short trail of warm motes left *behind* it along the
+    // direction of travel (left, the past), each smaller, fainter and more
+    // dispersed than the last — a memory leaving light behind as it moves,
+    // not a line joining one point to the next.
+    for (let k = 1; k <= WAKE_PER_MEMORY; k++) {
+      const wx = x - k * 3.1 - rand() * 1.3;
+      if (wx < 0.5) continue;
+      const spread = 0.35 + k * 0.75;
+      out.push({
+        x: wx,
+        y: curveAt(wx),
+        dy: (rand() < 0.5 ? -1 : 1) * spread * (0.4 + rand() * 0.6),
+        size: Math.max(0.9, 2.1 - k * 0.32),
+        opacity: Math.max(0.1, 0.44 - k * 0.08),
+        warm: rand() < 0.85,
+        kind: "wake",
+        memory: i,
+      });
+    }
+  });
+
+  for (let n = 0; n < AMBIENT_COUNT; n++) {
+    const x = 3 + rand() * 94;
+    const spread = 4 + rand() * 10;
     out.push({
       x,
       y: curveAt(x),
-      dy,
-      size: rand() < 0.82 ? 1 + rand() * 1.2 : 2 + rand() * 1.4,
-      opacity: 0.16 + rand() * 0.4,
-      warm: rand() < 0.45,
+      dy: (rand() < 0.5 ? -1 : 1) * spread,
+      size: 0.8 + rand() * 0.8,
+      opacity: 0.1 + rand() * 0.18,
+      warm: rand() < 0.3,
+      kind: "ambient",
       memory: null,
     });
   }
-
-  // Five slightly larger, slightly warmer points sitting exactly on the
-  // curve — one per real moment in the timeline. They brighten a little as
-  // the visitor passes their part of the chapter. No text is ever drawn
-  // here: the moments' actual words live in the DOM, in chapter 03.
-  timeline.forEach((_, i) => {
-    const x = 6 + i * 22;
-    out.push({
-      x,
-      y: curveAt(x),
-      dy: 0,
-      size: 2.6,
-      opacity: 0.3,
-      warm: true,
-      memory: i,
-    });
-  });
 
   return out;
 }
@@ -104,38 +120,55 @@ function buildParticles(): Particle[] {
  * constant rather than per-render randomness — no hook, and no chance of
  * the dust reshuffling itself on a re-render.
  */
-const PARTICLES = buildParticles();
-
-/**
- * The faint guide curve, sampled from `curveAt` rather than drawn as
- * straight segments between the anchors — a polyline through five points
- * would show visible kinks even at this opacity.
- */
-const CURVE_D = (() => {
-  const points: string[] = [];
-  for (let x = 0; x <= 100; x += 2) points.push(`${x} ${curveAt(x).toFixed(2)}`);
-  return `M ${points.join(" L ")}`;
-})();
+const MOTES = buildMotes();
 
 function smoothstep(t: number) {
   const c = Math.min(1, Math.max(0, t));
   return c * c * (3 - 2 * c);
 }
 
+function moteStyle(mote: Mote): CSSProperties {
+  const style: Record<string, string> = {
+    left: `${mote.x}%`,
+    top: `${mote.y}%`,
+    width: `${mote.size}px`,
+    height: `${mote.size}px`,
+    background: mote.warm ? "var(--accent)" : "var(--foreground-muted)",
+    "--dy": `${mote.dy.toFixed(2)}vh`,
+    "--o": mote.opacity.toFixed(3),
+  };
+  if (mote.kind === "memory") {
+    style["--m"] = `var(--m${mote.memory}, 0)`;
+  } else if (mote.kind === "wake") {
+    // Faint until its moment has been passed, then it holds as a trail.
+    style.opacity = `calc(var(--o) * (0.22 + 0.78 * var(--r${mote.memory}, 0)))`;
+  }
+  return style as CSSProperties;
+}
+
 /**
- * The cosmic path (brief §23-25): a suggestion of forward travel through
- * the journey chapter, built from tiny particles, warm dust and one very
- * low-opacity curve. Explicitly *not* a lit road — there is no continuous
- * bright stroke, no grid, no colour outside the site's candlelight range,
- * and nothing that reads as a surface to walk on. It is meant to be noticed
- * about as much as dust in a projector beam.
+ * The cosmic path (brief §23-25): memories leaving a trail through space.
+ * Five warm points — one per real moment — each trailing a short wake of
+ * fading motes behind it, plus a little loose dust. Sparse and warm, and
+ * explicitly *not* a road: no continuous stroke (an earlier faint guide line
+ * was removed because any unbroken line reads as a path to walk along), no
+ * grid, no colour outside the site's candlelight range. It is meant to be
+ * noticed about as much as dust in a projector beam.
+ *
+ * Scroll drives three things: the layer's presence around chapter 04; each
+ * moment brightening as the visitor reaches it (`--m{i}`); and each wake
+ * filling in once that moment has been passed (`--r{i}`), so the trail
+ * behind the visitor is always more complete than the way ahead.
  *
  * It also carries the chapter 03 -> 04 transition. `--seam-constellation`
- * peaks exactly on that boundary, and the particles' scatter is multiplied
- * by its inverse: at the seam every point sits on the line (a constellation
- * — the same aligned-points language as the Memory Constellation just
- * above), and they disperse into travelling dust as the visitor moves down
- * into the journey. The remembered moments become the road between them.
+ * peaks exactly on that boundary, and the motes' scatter is multiplied by
+ * its inverse: at the seam every point sits on the line (a constellation —
+ * the same aligned-points language as the Memory Constellation just above),
+ * and they disperse into travelling dust as the visitor moves down into the
+ * journey.
+ *
+ * Brightness also follows the shared `--grade-quiet` (grade.ts), like every
+ * other cosmic layer.
  *
  * Driven entirely by CSS custom properties written from the shared scroll
  * store — no rAF, no IntersectionObserver, no ResizeObserver — so it cannot
@@ -163,19 +196,30 @@ export default function CosmicPath() {
 
     const JOURNEY_CENTRE = 3 / 7; // chapter 04 of 8, in storyPosition terms
     const HALF = 1.7 / 7;
+    const count = timeline.length;
+    // Last written values, so an unchanged property is never rewritten
+    // (every write invalidates style for all the motes underneath).
+    const last = new Map<string, string>();
+    const write = (name: string, value: number) => {
+      const text = value.toFixed(3);
+      if (last.get(name) === text) return;
+      last.set(name, text);
+      el.style.setProperty(name, text);
+    };
 
     const apply = () => {
       const { storyPosition, chapterId, chapterProgress } = readSceneProgress();
-      const presence = smoothstep(
-        1 - Math.abs(storyPosition - JOURNEY_CENTRE) / HALF
+      write(
+        "--path-in",
+        smoothstep(1 - Math.abs(storyPosition - JOURNEY_CENTRE) / HALF)
       );
-      el.style.setProperty("--path-in", presence.toFixed(4));
 
-      const p = chapterId === "journey" ? chapterProgress : storyPosition > JOURNEY_CENTRE ? 1 : 0;
-      for (let i = 0; i < timeline.length; i++) {
-        const centre = (i + 0.5) / timeline.length;
-        const m = smoothstep(1 - Math.abs(p - centre) / 0.17);
-        el.style.setProperty(`--m${i}`, m.toFixed(4));
+      const p =
+        chapterId === "journey" ? chapterProgress : storyPosition > JOURNEY_CENTRE ? 1 : 0;
+      for (let i = 0; i < count; i++) {
+        const centre = (i + 0.5) / count;
+        write(`--m${i}`, smoothstep(1 - Math.abs(p - centre) / 0.17));
+        write(`--r${i}`, smoothstep((p - centre + 0.06) / 0.16));
       }
     };
 
@@ -185,43 +229,21 @@ export default function CosmicPath() {
   if (!mounted) return null;
 
   return (
-    <div ref={rootRef} className="cosmic-path" aria-hidden="true">
-      <svg
-        className="cosmic-path__curve"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        <path
-          d={CURVE_D}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="0.25"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      {PARTICLES.map((particle, i) => (
+    <div
+      ref={rootRef}
+      className="cosmic-path"
+      aria-hidden="true"
+      style={{ opacity: "calc(var(--path-in, 0) * (1 - var(--grade-quiet, 0) * 0.6))" }}
+    >
+      {MOTES.map((mote, i) => (
         <span
           key={i}
           className={
-            particle.memory === null
-              ? "cosmic-path__dust"
-              : "cosmic-path__dust cosmic-path__dust--memory"
+            mote.kind === "memory"
+              ? "cosmic-path__dust cosmic-path__dust--memory"
+              : "cosmic-path__dust"
           }
-          style={
-            {
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              background: particle.warm
-                ? "var(--accent)"
-                : "var(--foreground-muted)",
-              "--dy": `${particle.dy.toFixed(2)}vh`,
-              "--o": particle.opacity.toFixed(3),
-              "--m":
-                particle.memory === null ? "0" : `var(--m${particle.memory}, 0)`,
-            } as React.CSSProperties
-          }
+          style={moteStyle(mote)}
         />
       ))}
     </div>

@@ -5,7 +5,9 @@ import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { timeline } from "@/lib/content";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useNarrowViewport } from "@/hooks/useMediaQuery";
+import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
+import { useInViewReveal } from "@/components/chapters/useInViewReveal";
+import { useMotionEngineAlive } from "@/components/chapters/useMotionEngine";
 
 // Coordinates within a 0-100 x, 0-40 y viewBox — a slim horizontal strip so
 // the constellation reads as a quiet underline to the timeline, not a
@@ -20,26 +22,34 @@ const CONSTELLATION_POINTS: [number, number][] = [
 ];
 
 /**
- * Chapter 3 — pinned, scroll-driven storytelling sequence. The section is
- * pinned for the length of five viewport-heights of scroll; as the user
- * scrolls, GSAP crossfades between the five timeline entries. This is the
- * brief's required "pinned/scroll-driven storytelling sequence".
+ * Chapter 3 — pinned, scroll-driven storytelling sequence. The section pins
+ * for five viewport-heights of scroll and crossfades between the five
+ * timeline entries, while the "Memory Constellation" underneath gradually
+ * connects.
  *
- * Layered on top: the "Memory Constellation" — as the user scrolls through,
- * the five points gradually connect with thin lines, echoing the timeline
- * without ever forming a literal shape.
+ * The crossfade is driven by a `data-state` attribute (active / past /
+ * future) with CSS transitions, not by inline `opacity: 0`. Previously
+ * MotionSafetyNet force-revealed the four waiting entries 3.5s after load,
+ * so all five sat on top of each other until the pin engaged.
  *
- * With prefers-reduced-motion OR a narrow (phone) viewport, pinning and
- * scrubbing are disabled entirely and every entry is instead laid out as a
- * normal, statically readable list — pinned scrub sequences are the one
- * effect most prone to fighting touch scroll, so mobile gets the calmer,
- * always-legible fallback rather than a half-working pin.
+ * Pinning is skipped — every entry laid out as a plain, readable list — on
+ * prefers-reduced-motion, on phones and other touch-first devices (pins
+ * fight touch scrolling), and
+ * whenever animation frames are not verifiably being delivered, since a
+ * stalled ScrollTrigger would otherwise leave four of the five moments
+ * unreachable.
  */
 export default function ChapterTimeline() {
   const root = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const narrow = useNarrowViewport();
-  const skipPin = reduced || narrow;
+  // Touch-first devices of any width (a phone held landscape, a tablet):
+  // a pinned scrub fights momentum scrolling there.
+  const coarsePointer = useCoarsePointer();
+  const engineAlive = useMotionEngineAlive();
+  const skipPin = reduced || narrow || coarsePointer || !engineAlive;
+
+  useInViewReveal(root);
 
   useGSAP(
     () => {
@@ -47,9 +57,6 @@ export default function ChapterTimeline() {
 
       const entries = gsap.utils.toArray<HTMLElement>("[data-timeline-entry]");
       if (entries.length === 0) return;
-
-      gsap.set(entries, { opacity: 0, y: 40 });
-      gsap.set(entries[0], { opacity: 1, y: 0 });
 
       const segments = gsap.utils.toArray<SVGLineElement>(
         "[data-constellation-segment]"
@@ -76,23 +83,16 @@ export default function ChapterTimeline() {
             Math.floor(self.progress * entries.length)
           );
           entries.forEach((el, i) => {
-            gsap.to(el, {
-              opacity: i === idx ? 1 : 0,
-              y: i === idx ? 0 : i < idx ? -30 : 40,
-              duration: 0.4,
-              overwrite: "auto",
-            });
+            const state = i === idx ? "active" : i < idx ? "past" : "future";
+            if (el.dataset.state !== state) el.dataset.state = state;
           });
-          // Constellation: each point doubles as the caption progress dot
-          // (brief calls for the timeline dates/points themselves to
-          // connect). Reveal point i and the segment leading to it in step
-          // with overall scroll progress, not just the active caption, so
-          // the line keeps gently building even while a caption holds.
+          // Constellation: each point doubles as the caption progress dot.
+          // Reveal point i and the segment leading to it in step with
+          // overall scroll progress, so the line keeps gently building even
+          // while a caption holds.
           const raw = self.progress * (entries.length - 1);
           points.forEach((p, i) => {
             const reached = raw >= i - 0.05;
-            p.classList.toggle("fill-accent", reached || i === idx);
-            p.classList.toggle("fill-foreground-muted/30", !(reached || i === idx));
             gsap.to(p, {
               opacity: reached ? 1 : 0.35,
               scale: i === idx ? 1.3 : reached ? 1 : 0.8,
@@ -112,69 +112,64 @@ export default function ChapterTimeline() {
         },
       });
 
+      // The layout above this chapter just changed from list to stage;
+      // every later trigger's start/end must be measured against that.
+      ScrollTrigger.refresh();
+
       return () => st.kill();
     },
-    { scope: root, dependencies: [skipPin] }
+    { scope: root, dependencies: [skipPin], revertOnUpdate: true }
   );
 
   return (
     <section
       ref={root}
       id="story"
-      aria-label="Chapter 3: Our story became a world"
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-transparent px-6 py-32"
+      aria-labelledby="story-title"
+      className="relative flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-transparent px-[max(1.5rem,env(safe-area-inset-left))] py-32 sm:px-6"
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(217,167,92,0.1),transparent_65%)]"
-      />
-      <div className="relative z-10 mx-auto max-w-2xl text-center">
-        <span className="mb-4 block text-[11px] tracking-[0.35em] uppercase text-accent-soft">
+      <div className="relative z-10 mx-auto w-full max-w-2xl text-center">
+        <p className="type-meta" data-reveal="fade">
           Chapter 03
-        </span>
-        <h2 className="font-display text-[clamp(1.8rem,5vw,3.2rem)] leading-tight text-foreground">
-          Our story became a world
+        </p>
+        <h2 id="story-title" className="type-chapter mt-5" data-reveal="mask">
+          <span className="reveal-line">Our story became a world</span>
         </h2>
-        <p className="mx-auto mt-4 max-w-lg text-balance text-foreground-muted">
+        <p className="type-emotion mx-auto mt-6 max-w-lg" data-reveal="fade">
           Every conversation, every smile and every small moment left a light
           behind.
         </p>
 
-        <div
+        <ol
           className={
             skipPin
-              ? "mt-16 flex flex-col gap-10 text-left"
-              : "relative mt-16 flex h-[220px] items-center justify-center"
+              ? "mt-20 flex flex-col gap-14 text-left"
+              : "timeline-stage relative mt-16 h-[240px]"
           }
         >
-          {timeline.map((entry) => (
-            <div
+          {timeline.map((entry, i) => (
+            <li
               key={entry.number}
               data-timeline-entry={skipPin ? undefined : ""}
+              data-state={skipPin ? undefined : i === 0 ? "active" : "future"}
+              data-reveal={skipPin ? "fade" : undefined}
               className={
                 skipPin
-                  ? "border-l border-line pl-6"
+                  ? "border-l border-[rgba(215,185,122,0.22)] pl-6"
                   : "absolute inset-0 flex flex-col items-center justify-center"
               }
             >
-              <span className="text-[11px] tracking-[0.3em] text-accent-soft">
-                {entry.number}
-              </span>
-              <h3 className="mt-2 font-display text-2xl text-foreground sm:text-3xl">
-                {entry.title}
-              </h3>
-              <p className="mt-2 max-w-md text-balance italic text-foreground-muted">
-                {entry.line}
-              </p>
-            </div>
+              <p className="type-meta">{entry.number}</p>
+              <h3 className="type-chapter timeline-entry-title mt-2">{entry.title}</h3>
+              <p className="type-emotion mt-2 max-w-md">{entry.line}</p>
+            </li>
           ))}
-        </div>
+        </ol>
 
-        {/* Memory Constellation — the five moments gradually connect as the
-            chapter scrolls. Purely decorative/atmospheric (aria-hidden); the
-            same five moments are already conveyed in real text above and in
-            the ChapterNav accessibility panel, so this never gates content. */}
-        <div className="mx-auto mt-8 w-full max-w-md" aria-hidden="true">
+        {/* Memory Constellation — purely decorative (aria-hidden, exempt from
+            the motion safety net); the same five moments are real text
+            above. */}
+        <div className="mx-auto mt-10 w-full max-w-md" aria-hidden="true">
           <svg viewBox="0 0 100 40" className="h-10 w-full overflow-visible">
             {!skipPin &&
               CONSTELLATION_POINTS.slice(0, -1).map(([x1, y1], i) => {
@@ -197,15 +192,14 @@ export default function ChapterTimeline() {
               <circle
                 key={i}
                 data-constellation-point
+                data-motion-exempt
                 cx={x}
                 cy={y}
-                r={skipPin ? 1.6 : 1.4}
-                className="fill-foreground-muted/30 transition-colors duration-300"
-                style={
-                  skipPin
-                    ? { fill: "var(--accent-soft)", opacity: 1 - i * 0.12 }
-                    : undefined
-                }
+                r={skipPin ? 1.4 : 1.2}
+                style={{
+                  fill: "var(--accent-soft)",
+                  opacity: skipPin ? 0.85 - i * 0.12 : undefined,
+                }}
               />
             ))}
           </svg>

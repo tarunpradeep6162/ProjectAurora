@@ -197,11 +197,13 @@ function buildPoints(total: number) {
     toneMapped: false,
     uniforms: {
       uTime: { value: 0 },
+      uAngle: { value: 0 },
       uPixelRatio: { value: 1 },
       uCalm: { value: 0 },
     },
     vertexShader: `
       uniform float uTime;
+      uniform float uAngle;
       uniform float uPixelRatio;
       uniform float uCalm;
       attribute vec3 aColor;
@@ -215,16 +217,30 @@ function buildPoints(total: number) {
       varying float vSoft;
 
       void main() {
-        // Differential drift per depth layer: the distant universe is almost
-        // fixed, the near field moves most. Combined with real perspective
-        // parallax from the radius bands, this is what sells depth without
-        // simply adding more stars.
-        float spin = (0.006 + aLayer * 0.010) * (1.0 - uCalm * 0.6);
-        float ang = uTime * spin;
+        // Differential drift per depth layer: the distant universe and the
+        // galactic core stay fixed (the core has to stay aligned with the
+        // nebula's bulge), the near field moves most. Combined with real
+        // perspective parallax from the radius bands, this sells depth
+        // without simply adding more stars.
+        //
+        // uAngle is integrated on the CPU. Computing it here as
+        // uTime * rate(uCalm) made the angle jump whenever calm changed at a
+        // chapter boundary, by more than a full turn once a visit had run a
+        // few minutes.
+        float mul = aLayer > 3.5 ? 0.0
+          : aLayer > 2.5 ? 1.8
+          : aLayer > 1.5 ? 1.0
+          : aLayer > 0.5 ? 0.35
+          : 0.0;
+        float ang = uAngle * mul;
         float s = sin(ang);
         float c = cos(ang);
+        // Rotate about the shell's own centre (z = -20), not the world
+        // origin, so the layers turn in place instead of orbiting the camera.
         vec3 p = position;
+        p.z += 20.0;
         p.xz = mat2(c, -s, s, c) * p.xz;
+        p.z -= 20.0;
 
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
@@ -291,6 +307,7 @@ export default function CosmicStarField({
   const groupRef = useRef<THREE.Group>(null);
   const pointsRef = useRef<THREE.Points | null>(null);
   const calmRef = useRef(0);
+  const angleRef = useRef(0);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -325,6 +342,9 @@ export default function CosmicStarField({
       : 0;
     calmRef.current += (targetCalm - calmRef.current) * Math.min(1, delta * 1.5);
     material.uniforms.uCalm.value = calmRef.current;
+
+    angleRef.current += delta * 0.006 * (1 - calmRef.current * 0.6);
+    material.uniforms.uAngle.value = angleRef.current;
   });
 
   return <group ref={groupRef} />;

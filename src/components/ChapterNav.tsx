@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { chapters } from "@/lib/content";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
@@ -9,15 +8,18 @@ import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
 /**
  * Accessibility & Chapters panel.
  *
- * This is a genuine navigation + accessibility feature, not a decorative
- * copy of the reference site's panel:
- *  - Keyboard operable (Tab / Enter / Space) chapter jump list.
- *  - Every chapter's "hidden message" (its emotional through-line) is
- *    exposed as real text here, so it is available to screen-reader users
- *    and to anyone with reduced motion who may not trigger the equivalent
- *    scroll-driven reveal in the chapter itself.
- *  - ESC closes the panel.
- *  - Reports the active chapter as an ARIA live region for non-visual users.
+ * A genuine navigation + accessibility feature:
+ *  - Keyboard operable (Tab / Enter / Space) chapter jump list, 44px rows.
+ *  - Every chapter's "hidden message" is exposed as real text here, for
+ *    screen-reader users and anyone who does not trigger the equivalent
+ *    reveal in the chapter itself.
+ *  - ESC closes the panel and returns focus to its button.
+ *  - Reports the active chapter through an ARIA live region.
+ *
+ * Restraint pass: one compact control in the corner that also shows where
+ * you are ("03 / 08"). The permanent dot rail down the right-hand edge is
+ * gone, and so are the pill shape and the frosted glass. The control
+ * recedes entirely while the candle holds its darkness (`.chrome-recede`).
  */
 export default function ChapterNav() {
   const [open, setOpen] = useState(false);
@@ -25,14 +27,10 @@ export default function ChapterNav() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Was an `IntersectionObserver` over the eight sections. That has a real
-  // failure mode: in some embedding contexts IntersectionObserver callbacks
-  // never fire at all, which would silently freeze the nav — and its ARIA
-  // live region — reporting "Chapter 01" for the entire visit, including
-  // for screen-reader users who have no other way to tell where they are.
-  // The shared scroll store already computes exactly this, has no such
-  // failure mode, and adds no second listener to the page.
+  // Shared scroll store rather than IntersectionObserver, which never fires
+  // in some embedding contexts (see sceneProgress.ts).
   const activeIndex = useActiveChapterIndex();
+  const current = chapters[activeIndex] ?? chapters[0];
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -48,115 +46,94 @@ export default function ChapterNav() {
   function jumpTo(id: string) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+    el.scrollIntoView({ behavior: reduced ? "instant" : "smooth" });
     setOpen(false);
   }
 
   return (
     <>
-      <div className="fixed top-5 left-4 sm:top-6 sm:left-6 z-50">
+      <nav
+        aria-label="Chapters"
+        className="chrome-recede fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] z-50 sm:top-6 sm:left-6"
+      >
         <button
           ref={buttonRef}
           type="button"
           aria-expanded={open}
           aria-controls="chapter-nav-panel"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-full border border-line bg-background-deep/70 px-4 py-2 text-[11px] tracking-[0.18em] uppercase text-foreground-muted backdrop-blur-sm hover:text-accent-soft hover:border-accent transition-colors"
+          className="chrome-button"
         >
-          <span aria-hidden="true">&#9776;</span>
-          Chapters &amp; Accessibility
+          <span aria-hidden="true" className="flex w-3.5 flex-col gap-[4px]">
+            <span className="block h-px w-full bg-current" />
+            <span className="block h-px w-2/3 bg-current" />
+          </span>
+          <span className="hidden sm:inline">Chapters</span>
+          <span className="sr-only sm:hidden">Chapters and accessibility</span>
+          <span aria-hidden="true" className="tabular-nums text-[rgba(200,168,106,0.8)]">
+            {current.number}
+            <span className="text-[rgba(221,211,197,0.35)]"> / {String(chapters.length).padStart(2, "0")}</span>
+          </span>
         </button>
 
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              id="chapter-nav-panel"
-              ref={panelRef}
-              role="dialog"
-              aria-label="Chapter navigation and accessibility panel"
-              initial={reduced ? { opacity: 1 } : { opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
-              transition={{ duration: reduced ? 0.01 : 0.28, ease: [0.19, 1, 0.22, 1] }}
-              className="mt-3 w-[min(90vw,380px)] max-h-[70vh] overflow-y-auto rounded-2xl border border-line bg-background-deep/95 p-5 shadow-2xl backdrop-blur-md"
-            >
-              <h2 className="font-display text-lg text-accent-soft mb-1">
-                Chapters
-              </h2>
-              <p className="text-xs text-foreground-muted mb-4 leading-relaxed">
-                Jump to any chapter. Each entry also reveals its hidden
-                message in text — a non-visual equivalent of the chapter&apos;s
-                scroll-driven reveal, always available regardless of motion
-                settings.
-              </p>
-              <ol className="space-y-1">
-                {chapters.map((chapter, i) => (
-                  <li key={chapter.id}>
-                    <button
-                      type="button"
-                      onClick={() => jumpTo(chapter.id)}
-                      className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${
-                        i === activeIndex
-                          ? "bg-accent/15 text-accent-soft"
-                          : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
-                      }`}
-                    >
-                      <span className="block text-[10px] tracking-[0.2em] opacity-70">
-                        {chapter.number}
-                      </span>
-                      <span className="block font-display text-base leading-tight">
-                        {chapter.title}
-                      </span>
-                      <span className="block text-[11px] italic opacity-70 mt-0.5">
-                        {chapter.hiddenMessage}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4 pt-4 border-t border-line text-[11px] text-foreground-muted leading-relaxed">
-                Reduced motion is currently{" "}
-                <strong className="text-accent-soft">
-                  {reduced ? "on" : "off"}
-                </strong>{" "}
-                (detected from your system settings). When on, this site
-                disables scroll-driven parallax and shortens transitions
-                automatically.
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Chapter dots — top-right quick jump, also keyboard accessible */}
-      <nav
-        aria-label="Chapter progress"
-        className="fixed top-1/2 right-4 sm:right-6 z-40 -translate-y-1/2 hidden md:flex flex-col gap-3"
-      >
-        {chapters.map((chapter, i) => (
-          <button
-            key={chapter.id}
-            type="button"
-            onClick={() => jumpTo(chapter.id)}
-            aria-label={`Go to chapter ${chapter.number}: ${chapter.title}`}
-            aria-current={i === activeIndex}
-            className="group relative flex items-center justify-end"
+        {/* Plain conditional render with a CSS entrance (`.nav-panel`), no
+            exit animation: an animation-library exit waits on
+            requestAnimationFrame, and where frames stall the panel could
+            never unmount after Esc. */}
+        {open && (
+          <div
+            id="chapter-nav-panel"
+            ref={panelRef}
+            role="dialog"
+            aria-label="Chapter navigation and accessibility panel"
+            className="nav-panel mt-2 max-h-[min(72svh,40rem)] w-[min(calc(100vw-2rem),23rem)] overflow-y-auto overscroll-contain rounded-[2px] border border-[rgba(215,185,122,0.2)] bg-[rgba(8,8,7,0.97)] p-4 sm:p-5"
           >
-            <span
-              className={`h-2 w-2 rounded-full border transition-all duration-300 ${
-                i === activeIndex
-                  ? "bg-accent border-accent scale-125"
-                  : "bg-transparent border-foreground-muted/50 group-hover:border-accent-soft"
-              }`}
-            />
-          </button>
-        ))}
+            <h2 className="type-meta mb-2 px-2">Chapters</h2>
+            <p className="type-story mb-3 px-2 text-[0.8125rem] leading-relaxed text-[rgba(221,211,197,0.6)]">
+              Jump to any chapter. Each entry also carries its hidden message
+              in text — available regardless of motion settings.
+            </p>
+            <ol>
+              {chapters.map((chapter, i) => (
+                <li key={chapter.id}>
+                  <button
+                    type="button"
+                    onClick={() => jumpTo(chapter.id)}
+                    aria-current={i === activeIndex ? "location" : undefined}
+                    className={`block min-h-11 w-full rounded-[2px] border-l px-3 py-2.5 text-left transition-colors ${
+                      i === activeIndex
+                        ? "border-[rgba(215,185,122,0.8)] bg-[rgba(215,185,122,0.06)] text-accent-soft"
+                        : "border-transparent text-[rgba(221,211,197,0.78)] hover:bg-white/[0.03] hover:text-foreground"
+                    }`}
+                  >
+                    <span className="block text-[10px] tracking-[0.24em] opacity-70">
+                      {chapter.number}
+                    </span>
+                    <span className="block font-display text-[1.05rem] leading-tight">
+                      {chapter.title}
+                    </span>
+                    <span className="mt-0.5 block font-display text-[0.9rem] italic leading-snug opacity-70">
+                      {chapter.hiddenMessage}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="type-story mt-3 border-t border-[rgba(215,185,122,0.16)] px-2 pt-3 text-[0.75rem] leading-relaxed text-[rgba(221,211,197,0.6)]">
+              Reduced motion is currently{" "}
+              <strong className="font-normal text-accent-soft">
+                {reduced ? "on" : "off"}
+              </strong>{" "}
+              (detected from your system settings). When on, this site
+              disables scroll-driven parallax and shortens transitions
+              automatically.
+            </div>
+          </div>
+        )}
       </nav>
 
       <div className="sr-only" role="status" aria-live="polite">
-        {chapters[activeIndex]
-          ? `Chapter ${chapters[activeIndex].number}: ${chapters[activeIndex].title}`
-          : ""}
+        {`Chapter ${current.number}: ${current.title}`}
       </div>
     </>
   );

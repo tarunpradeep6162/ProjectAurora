@@ -259,39 +259,333 @@ body {
     rgba(215, 185, 122, calc(0.2 + var(--m, 0) * 0.3));
 }
 
-/* The gold signature settling as the letter is left behind. */
-.letter-signature {
-  text-shadow: 0 0 calc(24px * (1 - var(--seam-lastlight, 0)))
-    rgba(215, 185, 122, 0.4);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .last-light {
     display: none;
   }
-  .letter-signature {
-    text-shadow: none;
+}
+
+/* In the base layer so the type classes and utilities below can override
+   it — an unlayered element rule would silently beat every layered class. */
+@layer base {
+  h1, h2, h3, h4 {
+    font-family: var(--font-display), serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 }
 
-h1, h2, h3, h4 {
-  font-family: var(--font-display), serif;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
+/* Gold-tinted, never a solid gold block over the words. */
 ::selection {
-  background: var(--accent);
-  color: var(--background-deep);
+  background: rgba(215, 185, 122, 0.3);
+  color: #fbf7ef;
 }
 
-/* Visible focus states for keyboard navigation */
-a:focus-visible,
-button:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--accent-soft);
-  outline-offset: 3px;
+/* Keyboard focus: a thin gold hairline held a few pixels off the element —
+   clearly visible on the near-black ground without looking like a UI kit. */
+:where(a, button, summary, [tabindex]):focus-visible {
+  outline: 1.5px solid rgba(231, 205, 150, 0.95);
+  outline-offset: 4px;
   border-radius: 2px;
+}
+
+/* ============================================================ TYPE ======
+   Five levels, used everywhere, never mixed ad hoc:
+     .type-film     film title — the opening only
+     .type-chapter  chapter titles
+     .type-emotion  the emotional line under a title, captions' titles
+     .type-story    story copy
+     .type-meta     small uppercase metadata (chapter numbers, instructions)
+   Cormorant carries levels 1-3, Jost carries 4-5. The letter is story copy
+   in a quieter reading mode (.type-letter), set in the serif.
+
+   All component classes live in `@layer components`, so a Tailwind utility
+   on the same element can still override them.
+   ======================================================================= */
+
+@layer components {
+.type-film {
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.9;
+  font-size: clamp(2.9rem, min(15.5vw, 19svh), 8.75rem);
+  color: var(--aurora-ivory);
+}
+
+.type-chapter {
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(2.05rem, 1.3rem + 3.1vw, 3.9rem);
+  line-height: 1.06;
+  letter-spacing: -0.012em;
+  color: var(--aurora-ivory);
+  text-wrap: balance;
+}
+
+.type-emotion {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.26rem, 1.05rem + 0.85vw, 1.8rem);
+  line-height: 1.42;
+  letter-spacing: 0;
+  color: var(--aurora-cream);
+  text-wrap: balance;
+}
+
+.type-story {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 300;
+  font-size: clamp(1rem, 0.94rem + 0.26vw, 1.14rem);
+  line-height: 1.75;
+  color: rgba(221, 211, 197, 0.86);
+}
+
+.type-meta {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 400;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+}
+
+/* Story copy, reading mode: the letter. 18-20px on phones, up to 24px on a
+   desktop, set in the serif with a long line-height. */
+.type-letter {
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(1.19rem, 1.02rem + 0.62vw, 1.5rem);
+  line-height: 1.78;
+  letter-spacing: 0.004em;
+  color: rgba(241, 236, 227, 0.93);
+  hyphens: manual;
+}
+}
+
+/* ========================================================== REVEAL ======
+   Driven by useInViewReveal (attributes, CSS transitions). Nothing here
+   hides anything unless JavaScript explicitly marks it pending, and that
+   hook guarantees it is un-marked again. Titles use a masked line; body
+   copy a plain fade. Never letter-by-letter. */
+
+[data-reveal="fade"] {
+  transition:
+    opacity 1.3s var(--ease-soft) var(--reveal-delay, 0ms),
+    transform 1.6s var(--ease-cinematic) var(--reveal-delay, 0ms);
+}
+
+[data-reveal="fade"][data-reveal-pending] {
+  opacity: 0;
+  transform: translate3d(0, 0.6rem, 0);
+}
+
+[data-reveal="mask"] {
+  display: block;
+  overflow: hidden;
+  overflow: clip;
+  /* Room for Cormorant's descenders inside the clip, given back in layout. */
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+[data-reveal="mask"] > .reveal-line {
+  display: block;
+  transition: transform 1.5s var(--ease-expo-out) var(--reveal-delay, 0ms);
+}
+
+[data-reveal="mask"][data-reveal-pending] > .reveal-line {
+  transform: translate3d(0, 108%, 0);
+}
+
+[data-reveal-instant],
+[data-reveal-instant] > .reveal-line {
+  transition: none !important;
+}
+
+/* ========================================================= BUTTONS ======
+   Cinematic: thin outline, small uppercase, 2px radius. No pills, no glass. */
+
+@layer components {
+.btn-cinema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 2.875rem;
+  /* letter-spacing leaves a trailing gap after the last glyph; the extra
+     left padding re-centres the label optically. */
+  padding: 0.85rem 1.7rem 0.85rem calc(1.7rem + 0.3em);
+  border: 1px solid rgba(215, 185, 122, 0.45);
+  border-radius: 2px;
+  background: rgba(7, 7, 6, 0.2);
+  color: var(--aurora-ivory);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.5s var(--ease-soft),
+    background-color 0.5s var(--ease-soft),
+    color 0.5s var(--ease-soft);
+}
+
+.btn-cinema:hover {
+  border-color: rgba(215, 185, 122, 0.9);
+  background-color: rgba(215, 185, 122, 0.06);
+}
+
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  color: rgba(221, 211, 197, 0.62);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.625rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: rgba(215, 185, 122, 0.3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.6em;
+  transition: color 0.4s var(--ease-soft), text-decoration-color 0.4s var(--ease-soft);
+}
+
+.btn-quiet:hover {
+  color: var(--accent-soft);
+  text-decoration-color: rgba(215, 185, 122, 0.8);
+}
+
+/* Fixed chrome (chapter menu, sound). Recedes completely while the candle
+   holds its darkness and during the entry transition — see
+   `data-aurora-hush`, set by CandleInteraction and ChapterPortal. */
+.chrome-recede {
+  transition: opacity 0.9s var(--ease-soft), visibility 0s linear 0s;
+}
+
+html[data-aurora-hush] .chrome-recede {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease-soft), visibility 0s linear 0.5s;
+}
+
+.chrome-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(215, 185, 122, 0.2);
+  border-radius: 2px;
+  background: rgba(7, 7, 6, 0.62);
+  color: rgba(221, 211, 197, 0.78);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.625rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  transition: color 0.4s var(--ease-soft), border-color 0.4s var(--ease-soft);
+}
+
+.chrome-button:hover {
+  color: var(--accent-soft);
+  border-color: rgba(215, 185, 122, 0.55);
+}
+
+.nav-panel {
+  animation: nav-panel-in 0.28s var(--ease-expo-out) both;
+}
+
+@keyframes nav-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-panel {
+    animation: none;
+  }
+}
+
+/* ========================================================== LETTER ====== */
+
+.letter-hush {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(7, 7, 6, 0) 0%,
+    rgba(7, 7, 6, 0.8) min(26svh, 22%),
+    rgba(7, 7, 6, 0.84) max(calc(100% - 30svh), 78%),
+    rgba(7, 7, 6, 0) 100%
+  );
+}
+
+.letter-body {
+  text-wrap: pretty;
+}
+
+.letter-salutation {
+  font-style: italic;
+  color: var(--aurora-cream);
+}
+
+.letter-paragraph {
+  margin-top: 1.55em;
+}
+
+.letter-salutation + .letter-paragraph {
+  margin-top: 1.3em;
+}
+
+.letter-signoff {
+  margin-top: clamp(4.5rem, 14svh, 8rem);
+  padding-left: 18%;
+}
+
+@media (min-width: 640px) {
+  .letter-signoff {
+    padding-left: 46%;
+  }
+}
+
+.letter-signature {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.9rem, 1.5rem + 1.2vw, 2.5rem);
+  line-height: 1.2;
+  color: #e3d0a4;
+}
+
+/* The small warm point of light by his name. A light source, not a text
+   effect: the name itself carries no shadow at all. */
+.letter-light {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #ffe2b0;
+  box-shadow:
+    0 0 6px 1px rgba(255, 206, 140, 0.55),
+    0 0 22px 6px rgba(231, 178, 110, 0.14);
+  opacity: calc(0.9 - var(--seam-lastlight, 0) * 0.9);
+  transform: translateY(0.1em);
+}
 }
 
 /* Film grain overlay — subtle atmospheric texture.
@@ -359,4 +653,1076 @@ button:focus-visible,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.sr-only-focusable:focus {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 70;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid rgba(215, 185, 122, 0.5);
+  border-radius: 2px;
+  background: #080807;
+  color: var(--aurora-ivory);
+  font-size: 0.6875rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+/* ========================================================= OPENING ======
+   Chapter 01. Every animated value is a custom property whose default is
+   the finished frame (see ChapterPortal.tsx): --a opacity, --s scale,
+   --ty rise, --blur, --ls extra tracking, --pass / --pass-a light pass. */
+
+@layer components {
+.opening {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.opening [data-o] {
+  opacity: var(--a, 1);
+}
+
+.opening .opening-veil {
+  opacity: var(--a, 0);
+}
+
+.opening-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.opening-sky > span {
+  position: absolute;
+  display: block;
+}
+
+.opening-veil {
+  inset: 0;
+  background: #030303;
+}
+
+.opening-star {
+  width: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: #f6efe1;
+  box-shadow: 0 0 3px rgba(246, 239, 225, 0.55);
+  transform: scale(var(--s, 1));
+}
+
+.opening-star--one {
+  top: 19%;
+  left: 76%;
+}
+
+.opening-star--two {
+  top: 35%;
+  left: 19%;
+  width: 1.5px;
+  height: 1.5px;
+}
+
+@media (min-width: 768px) {
+  .opening-star--one {
+    top: 22%;
+    left: 70%;
+  }
+  .opening-star--two {
+    top: 40%;
+    left: 27%;
+  }
+}
+
+.opening-haze {
+  inset: -10% -20% 10%;
+  background: radial-gradient(
+    ellipse 50% 42% at 64% 34%,
+    rgba(122, 108, 132, 0.12),
+    rgba(70, 60, 72, 0.05) 48%,
+    transparent 72%
+  );
+}
+
+.opening-aurora {
+  top: 2%;
+  right: -18%;
+  width: min(92vw, 1100px);
+  height: 52%;
+  background:
+    radial-gradient(
+      ellipse 58% 34% at 58% 52%,
+      rgba(215, 185, 122, 0.17),
+      rgba(185, 133, 119, 0.07) 46%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 36% 20% at 36% 62%,
+      rgba(128, 168, 156, 0.07),
+      transparent 70%
+    );
+  transform: rotate(-13deg) scaleX(var(--s, 1));
+  transform-origin: 72% 50%;
+  will-change: transform, opacity;
+}
+
+.opening-frame {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 7rem max(1.5rem, env(safe-area-inset-right))
+    max(3rem, calc(env(safe-area-inset-bottom) + 2.25rem))
+    max(1.5rem, env(safe-area-inset-left));
+}
+
+@media (min-width: 768px) {
+  .opening-frame {
+    padding: 8rem 8vw 14svh;
+  }
+}
+
+.opening-for,
+.opening-sub,
+.opening-msg,
+.opening-cta,
+.opening-slate {
+  transform: translate3d(0, calc(var(--ty, 0) * 1px), 0);
+}
+
+.opening-for {
+  margin: 0 0 1.5rem;
+  color: var(--aurora-cream);
+  letter-spacing: calc(0.42em + var(--ls, 0) * 1em);
+  filter: blur(calc(var(--blur, 0) * 1px));
+}
+
+.opening-title {
+  margin: 0;
+  letter-spacing: calc(0.02em + var(--ls, 0) * 1em);
+}
+
+.opening-mask {
+  display: block;
+  overflow: hidden;
+  overflow: clip;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+
+/* Asymmetric: AURORA sits a step to the right of PROJECT. */
+.opening-mask + .opening-mask {
+  margin-left: 0.5em;
+}
+
+.opening-line {
+  display: inline-block;
+  transform: translate3d(0, calc(var(--ty, 0) * 1%), 0);
+  filter: blur(calc(var(--blur, 0) * 1px));
+}
+
+/* The one warm light pass across AURORA: crisp, clipped to the letters,
+   no glow. Played once, on a first reveal only. */
+.opening-line--aurora {
+  position: relative;
+}
+
+.opening-line--aurora::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 240, 212, 0) 45%,
+    rgba(255, 236, 200, 0.92) 50%,
+    rgba(255, 240, 212, 0) 55%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  background-position: calc(var(--pass, 88) * 1%) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  opacity: var(--pass-a, 0);
+}
+
+.opening-sub {
+  margin: 1.9rem 0 0;
+  color: rgba(221, 211, 197, 0.72);
+}
+
+.opening-msg {
+  margin: 0.9rem 0 0;
+  max-width: 27rem;
+}
+
+.opening-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.6rem;
+  margin-top: 2.5rem;
+}
+
+.opening-hint {
+  color: rgba(221, 211, 197, 0.42);
+  letter-spacing: 0.3em;
+}
+
+/* Chapter slate: a vertical edge label on phones, bottom-right on larger
+   screens. Present, but out of the composition's way. */
+.opening-slate {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: max(0.85rem, env(safe-area-inset-right));
+  margin: 0;
+  writing-mode: vertical-rl;
+  color: rgba(200, 168, 106, 0.6);
+  font-size: 0.5625rem;
+  translate: 0 -50%;
+}
+
+@media (min-width: 768px) {
+  .opening-slate {
+    /* Level with the chapter control on the opposite corner. */
+    top: 2.35rem;
+    right: 8vw;
+    writing-mode: horizontal-tb;
+    font-size: 0.625rem;
+    translate: none;
+  }
+}
+
+/* Short landscape phones: title on one line, tighter vertical rhythm. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .opening-frame {
+    padding-top: 4.75rem;
+    padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
+  }
+  .opening-title {
+    font-size: min(8.4vw, 19svh);
+  }
+  .opening-mask {
+    display: inline-block;
+  }
+  .opening-for {
+    margin-bottom: 0.9rem;
+  }
+  .opening-sub {
+    margin-top: 1rem;
+  }
+  .opening-cta {
+    margin-top: 1.25rem;
+  }
+}
+
+.opening[data-entering] .opening-frame,
+.opening[data-entering] .opening-slate {
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity 0.6s var(--ease-soft),
+    transform 1s var(--ease-soft);
+}
+}
+
+/* Pre-hydration: hold the opening dark (scripting on only), with a CSS-only
+   failsafe that shows the finished frame if JavaScript never arrives. Once
+   the component arms itself (data-opening) this no longer applies. */
+@media (scripting: enabled) {
+  .opening:not([data-opening]) [data-o]:not([data-o="veil"]) {
+    opacity: 0;
+    animation: opening-failsafe 1.2s ease 6s forwards;
+  }
+}
+
+@keyframes opening-failsafe {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ======================================================= ENTRY WARP ======
+   Begin the Journey: stars pull outward, the portal opens, the foreground
+   darkens into a warm bloom, and the first photograph emerges from the
+   light (#miracle[data-emerge]). 1.7s, CSS only. */
+
+.entry-warp {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.entry-warp > span {
+  position: absolute;
+  display: block;
+}
+
+.entry-warp__dark {
+  inset: 0;
+  background: #040403;
+  opacity: 0;
+  animation: warp-dark 1.7s var(--ease-soft) forwards;
+}
+
+.entry-warp__stars {
+  inset: -15%;
+  opacity: 0;
+  background-repeat: repeat;
+  background-size: 460px 460px;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(241, 236, 227, 0.8), transparent 65%),
+    radial-gradient(1px 1px at 31% 64%, rgba(215, 185, 122, 0.7), transparent 65%),
+    radial-gradient(1.4px 1.4px at 47% 11%, rgba(241, 236, 227, 0.7), transparent 65%),
+    radial-gradient(1px 1px at 63% 78%, rgba(221, 211, 197, 0.6), transparent 65%),
+    radial-gradient(1.1px 1.1px at 82% 36%, rgba(215, 185, 122, 0.7), transparent 65%),
+    radial-gradient(1px 1px at 91% 88%, rgba(241, 236, 227, 0.55), transparent 65%);
+  animation: warp-stars 1.7s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+
+.entry-warp__stars--near {
+  background-size: 820px 820px;
+  animation-name: warp-stars-near;
+}
+
+.entry-warp__ring {
+  left: 50%;
+  top: 50%;
+  width: 34vmin;
+  height: 34vmin;
+  margin: -17vmin 0 0 -17vmin;
+  border: 1px solid rgba(231, 205, 150, 0.5);
+  border-radius: 9999px;
+  opacity: 0;
+  animation: warp-ring 1.25s cubic-bezier(0.2, 0.6, 0.2, 1) 0.12s forwards;
+}
+
+.entry-warp__bloom {
+  inset: -10%;
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 234, 200, 0.78) 0%,
+    rgba(236, 196, 140, 0.46) 16%,
+    rgba(160, 112, 70, 0.18) 40%,
+    rgba(20, 14, 8, 0) 68%
+  );
+  animation: warp-bloom 1.7s var(--ease-soft) forwards;
+}
+
+@keyframes warp-dark {
+  0% { opacity: 0; }
+  36% { opacity: 0.95; }
+  60% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+@keyframes warp-stars {
+  0% { opacity: 0; transform: scale(1); }
+  22% { opacity: 0.7; }
+  64% { opacity: 0.3; }
+  100% { opacity: 0; transform: scale(1.32); }
+}
+
+@keyframes warp-stars-near {
+  0% { opacity: 0; transform: scale(1); }
+  22% { opacity: 0.55; }
+  100% { opacity: 0; transform: scale(1.75); }
+}
+
+@keyframes warp-ring {
+  0% { opacity: 0; transform: scale(0.2); }
+  24% { opacity: 0.6; }
+  100% { opacity: 0; transform: scale(4.4); }
+}
+
+@keyframes warp-bloom {
+  0% { opacity: 0; transform: scale(0.45); }
+  30% { opacity: 0.25; }
+  50% { opacity: 0.85; transform: scale(1.08); }
+  60% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+/* ========================================================== CANDLE ======
+   Chapter 07. One candle, physically plain. Phases are a `data-phase`
+   attribute written by timers in CandleInteraction.tsx; all motion is CSS. */
+
+.candle-chapter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  padding: clamp(6rem, 15svh, 9rem) max(1.5rem, env(safe-area-inset-right))
+    max(4.5rem, calc(env(safe-area-inset-bottom) + 3.5rem))
+    max(1.5rem, env(safe-area-inset-left));
+  text-align: center;
+}
+
+/* Near-black around the candle; lifts part-way once the universe returns. */
+.candle-room {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(4, 4, 3, 0) 0%,
+    rgba(4, 4, 3, 0.9) 18%,
+    rgba(4, 4, 3, 0.93) 82%,
+    rgba(4, 4, 3, 0) 100%
+  );
+  transition: opacity 1.8s var(--ease-soft);
+}
+
+.candle-chapter[data-phase="universe"] .candle-room,
+.candle-chapter[data-phase="revealed"] .candle-room {
+  opacity: 0.5;
+}
+
+.candle-header {
+  position: relative;
+  z-index: 1;
+}
+
+/* Above the wish veil (46), so the smoke and the darkened candle stay in
+   the frame while everything else goes dark. */
+.candle-stage {
+  position: relative;
+  z-index: 47;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: clamp(3rem, 10svh, 6rem);
+}
+
+.candle {
+  position: relative;
+  display: block;
+  width: 7.5rem;
+  height: 12.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.candle[aria-disabled="true"] {
+  cursor: default;
+}
+
+.candle > span,
+.candle > svg {
+  position: absolute;
+  left: 50%;
+  display: block;
+  pointer-events: none;
+}
+
+.candle__wax {
+  bottom: 0;
+  width: 1.25rem;
+  height: 7rem;
+  margin-left: -0.625rem;
+  border-radius: 3px 3px 2px 2px;
+  background:
+    linear-gradient(to bottom, rgba(255, 208, 146, 0.32), rgba(255, 208, 146, 0) 40%),
+    linear-gradient(
+      90deg,
+      #3f3831 0%,
+      #9d9283 18%,
+      #ddd3c4 42%,
+      #ebe3d5 52%,
+      #bfb3a2 74%,
+      #4d453c 100%
+    );
+  transition: filter 1.2s var(--ease-soft);
+}
+
+.candle__wax::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: -1px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(255, 228, 184, 0.55),
+    rgba(196, 178, 150, 0.25) 70%
+  );
+}
+
+.candle-chapter:not([data-phase="lit"]) .candle__wax {
+  filter: brightness(0.2) saturate(0.6);
+}
+
+.candle-chapter[data-phase="universe"] .candle__wax,
+.candle-chapter[data-phase="revealed"] .candle__wax {
+  filter: brightness(0.36) saturate(0.7);
+}
+
+.candle__wick {
+  bottom: 7rem;
+  width: 2px;
+  height: 0.6rem;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: linear-gradient(to top, #2b241d, #120e0a 70%, #3a2a1c);
+}
+
+/* The ember left on the wick. */
+.candle__wick::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  width: 3px;
+  height: 3px;
+  margin-left: -1.5px;
+  border-radius: 9999px;
+  background: #ff8a3d;
+  box-shadow: 0 0 3px rgba(255, 120, 40, 0.8);
+  opacity: 0;
+}
+
+.candle-chapter:not([data-phase="lit"]) .candle__wick::after {
+  animation: ember-fade 2.4s ease-out forwards;
+}
+
+/* Warm falloff from the flame itself: small, low, soft. Not a disc. */
+.candle__light {
+  bottom: calc(7rem + 1.6rem - 12rem);
+  width: 24rem;
+  height: 24rem;
+  margin-left: -12rem;
+  transition: opacity 0.55s ease-out;
+}
+
+.candle__light::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 200, 135, 0.15) 0%,
+    rgba(245, 176, 106, 0.07) 12%,
+    rgba(210, 140, 90, 0.025) 30%,
+    transparent 55%
+  );
+  animation: light-breathe 3.3s ease-in-out infinite;
+}
+
+.candle-chapter:not([data-phase="lit"]) .candle__light {
+  opacity: 0;
+}
+
+.candle__flame {
+  bottom: calc(7rem + 0.5rem);
+  width: 1.5rem;
+  height: 3rem;
+  margin-left: -0.75rem;
+  transform-origin: 50% 92%;
+  animation: flame-sway 5.3s ease-in-out infinite;
+}
+
+.candle__flame-shape {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 92%;
+  animation: flame-flicker 1.9s ease-in-out infinite;
+  filter: blur(0.35px);
+}
+
+/* Each layer is a square with one sharp corner, turned 45deg and drawn out
+   vertically: a teardrop with its point up. */
+.candle__flame-shape > span {
+  position: absolute;
+  left: 50%;
+  display: block;
+  border-radius: 50% 0 50% 50%;
+}
+
+.candle__flame-edge {
+  top: calc(50% - 5.25px);
+  width: 10.5px;
+  height: 10.5px;
+  background: rgba(214, 90, 40, 0.5);
+  transform: translateX(-50%) scale(1, 2.8) rotate(-45deg);
+}
+
+.candle__flame-body {
+  top: calc(50% - 4.5px + 2px);
+  width: 9px;
+  height: 9px;
+  background: radial-gradient(
+    circle at 40% 60%,
+    #fff3d2 0%,
+    #ffd98c 30%,
+    #f6a84a 66%,
+    rgba(234, 124, 52, 0.9) 100%
+  );
+  transform: translateX(-50%) scale(1, 2.8) rotate(-45deg);
+}
+
+.candle__flame-core {
+  top: calc(50% - 2.4px + 7.5px);
+  width: 4.8px;
+  height: 4.8px;
+  background: radial-gradient(circle at 45% 55%, #fffef8 0%, #fff2cc 60%, rgba(255, 236, 190, 0) 100%);
+  transform: translateX(-50%) scale(1, 2.6) rotate(-45deg);
+}
+
+.candle__flame-base {
+  bottom: 3px;
+  width: 7px;
+  height: 5px;
+  margin-left: -3.5px;
+  border-radius: 50% !important;
+  background: radial-gradient(ellipse, rgba(110, 138, 214, 0.42), transparent 72%);
+}
+
+/* Blown out: bends, shrinks, flickers once more, gone. */
+.candle-chapter:not([data-phase="lit"]) .candle__flame {
+  animation: flame-out 0.65s cubic-bezier(0.33, 0.1, 0.55, 1) forwards;
+}
+
+.candle-chapter:not([data-phase="lit"]) .candle__flame-shape {
+  animation: none;
+}
+
+.candle__smoke {
+  bottom: calc(7rem + 0.45rem);
+  width: 2.5rem;
+  height: 9.5rem;
+  margin-left: -1.25rem;
+  overflow: visible;
+  filter: blur(0.6px);
+}
+
+.candle__smoke path {
+  stroke-dasharray: 170;
+  stroke-dashoffset: 170;
+  opacity: 0;
+  animation: smoke-rise 3s cubic-bezier(0.3, 0.2, 0.4, 1) 0.25s forwards;
+}
+
+.candle-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 5.5rem;
+  margin-top: 1.75rem;
+}
+
+.candle-instruction {
+  margin: 0;
+  color: rgba(221, 211, 197, 0.5);
+  letter-spacing: 0.3em;
+}
+
+.candle-wish {
+  margin: 0;
+  animation: wish-in 1.6s var(--ease-soft) both;
+}
+
+/* The held darkness. Fixed, so the whole frame goes dark. */
+.wish-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+  background: #030303;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 1.6s var(--ease-soft),
+    visibility 0s linear 1.6s;
+}
+
+.wish-veil[data-active] {
+  opacity: 0.97;
+  visibility: visible;
+  transition:
+    opacity 0.6s var(--ease-soft),
+    visibility 0s;
+}
+
+.wish-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: #f4ecdc;
+  box-shadow: 0 0 3px rgba(244, 236, 220, 0.5);
+  opacity: 0;
+}
+
+.wish-star--one {
+  top: 28%;
+  left: 34%;
+}
+
+.wish-star--two {
+  top: 19%;
+  left: 66%;
+  width: 1.5px;
+  height: 1.5px;
+}
+
+.candle-chapter:is([data-phase="stars"], [data-phase="universe"], [data-phase="revealed"]) .wish-star--one {
+  animation: wish-star 1s ease-out forwards;
+}
+
+.candle-chapter:is([data-phase="stars"], [data-phase="universe"], [data-phase="revealed"]) .wish-star--two {
+  animation: wish-star 1s ease-out 0.7s forwards;
+}
+
+@keyframes flame-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-1.3deg); }
+  62% { transform: rotate(1deg); }
+}
+
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  17% { transform: scale(0.97, 1.04) skewX(-1.2deg); }
+  34% { transform: scale(1.02, 0.97) skewX(0.8deg); }
+  51% { transform: scale(0.98, 1.03) skewX(-0.6deg); }
+  69% { transform: scale(1.01, 0.98) skewX(1deg); }
+  85% { transform: scale(0.99, 1.02) skewX(-0.4deg); }
+}
+
+@keyframes light-breathe {
+  0%, 100% { opacity: 1; }
+  40% { opacity: 0.86; }
+  70% { opacity: 0.95; }
+}
+
+@keyframes flame-out {
+  0% { transform: rotate(0deg) skewX(0deg) scale(1, 1); opacity: 1; }
+  20% { transform: rotate(-11deg) skewX(-10deg) scale(0.95, 0.82); opacity: 1; }
+  38% { transform: rotate(-7deg) skewX(-6deg) scale(0.72, 0.55); opacity: 0.8; }
+  50% { transform: rotate(-9deg) skewX(-9deg) scale(0.8, 0.64); opacity: 0.95; }
+  66% { transform: rotate(-5deg) skewX(-4deg) scale(0.45, 0.32); opacity: 0.55; }
+  76% { transform: rotate(-4deg) skewX(-3deg) scale(0.38, 0.26); opacity: 0.8; }
+  100% { transform: rotate(0deg) skewX(0deg) scale(0.04, 0.02); opacity: 0; }
+}
+
+@keyframes ember-fade {
+  0% { opacity: 1; }
+  40% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+@keyframes smoke-rise {
+  0% { stroke-dashoffset: 170; opacity: 0; transform: translateY(0); }
+  15% { opacity: 0.9; }
+  60% { stroke-dashoffset: 0; opacity: 0.5; }
+  100% { stroke-dashoffset: 0; opacity: 0; transform: translateY(-22px); }
+}
+
+@keyframes wish-star {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wish-in {
+  from { opacity: 0; transform: translate3d(0, 0.5rem, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candle__flame,
+  .candle__flame-shape,
+  .candle__light::before,
+  .candle-wish {
+    animation: none !important;
+  }
+  .candle-chapter:not([data-phase="lit"]) .candle__flame {
+    opacity: 0;
+  }
+  .candle__smoke {
+    display: none;
+  }
+}
+
+/* ======================================================== TIMELINE ====== */
+
+.timeline-stage [data-timeline-entry] {
+  transition:
+    opacity 0.7s var(--ease-soft),
+    transform 1s var(--ease-cinematic);
+}
+
+.timeline-stage [data-timeline-entry][data-state="future"] {
+  opacity: 0;
+  transform: translate3d(0, 2.25rem, 0);
+}
+
+.timeline-stage [data-timeline-entry][data-state="past"] {
+  opacity: 0;
+  transform: translate3d(0, -1.75rem, 0);
+}
+
+.timeline-entry-title {
+  font-size: clamp(1.75rem, 1.25rem + 1.9vw, 2.6rem);
+}
+
+/* ======================================================== MEMORIES ====== */
+
+.memory-flow {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3.5rem, 12svh, 7rem);
+  padding-bottom: 4rem;
+}
+
+.memory-panel {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.memory-flow .memory-panel {
+  height: 100vh;
+  height: 100svh;
+}
+
+/* Phones: a 4:5 frame, cropped around the face (photoFraming.ts), rather
+   than a full-height strip that would crop most of a landscape photo. */
+@media (max-width: 767px) {
+  .memory-flow .memory-panel {
+    height: auto;
+    aspect-ratio: 4 / 5;
+    max-height: 82svh;
+  }
+}
+
+.memory-panel--stacked {
+  position: absolute;
+  inset: 0;
+}
+
+.memory-stage .memory-panel--stacked {
+  transition:
+    opacity 1s var(--ease-soft),
+    transform 1.6s var(--ease-cinematic);
+}
+
+.memory-stage .memory-panel--stacked[data-state="future"] {
+  opacity: 0;
+  transform: translate3d(6%, 0, 0) scale(1.06);
+}
+
+.memory-stage .memory-panel--stacked[data-state="past"] {
+  opacity: 0;
+  transform: translate3d(-6%, 0, 0) scale(1.06);
+}
+
+.memory-panel__photo {
+  position: absolute;
+  inset: 0;
+}
+
+.memory-panel__photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(7, 7, 6, 0.9) 0%,
+    rgba(7, 7, 6, 0.38) 28%,
+    rgba(7, 7, 6, 0) 55%
+  );
+}
+
+.memory-panel__caption {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+  max-width: 26rem;
+  padding: 0 max(1.5rem, env(safe-area-inset-left))
+    max(2.25rem, calc(env(safe-area-inset-bottom) + 1.25rem));
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .memory-panel__caption {
+    padding: 0 2.5rem 3.5rem;
+  }
+}
+
+.memory-panel__title {
+  margin-top: 0.5rem;
+  color: var(--aurora-ivory);
+}
+
+/* ========================================================== FINALE ======
+   Chapter 08. The deepest frame on the site: the dark gathers towards the
+   end, three real photographs return as ghosts, and the words are spaced by
+   silence. `overflow: clip` (not hidden) so the ghost layer can stay sticky
+   without creating a scroll container. */
+
+.finale {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  overflow: clip;
+  isolation: isolate;
+}
+
+.finale-depth {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(3, 3, 3, 0) 0%,
+    rgba(3, 3, 3, 0.72) 12%,
+    rgba(2, 2, 2, 0.9) 55%,
+    #020202 88%
+  );
+}
+
+.finale-ghosts {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 100vh;
+  height: 100svh;
+  margin-bottom: -100vh;
+  margin-bottom: -100svh;
+  pointer-events: none;
+}
+
+.finale-ghost {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  -webkit-mask-image: radial-gradient(ellipse 60% 52% at 50% 46%, #000 28%, transparent 78%);
+  mask-image: radial-gradient(ellipse 60% 52% at 50% 46%, #000 28%, transparent 78%);
+  animation: ghost-dissolve 30s var(--ease-soft) infinite;
+  animation-delay: calc(var(--i, 0) * 10s);
+  animation-play-state: paused;
+}
+
+.finale-ghosts[data-live] .finale-ghost {
+  animation-play-state: running;
+}
+
+.finale-ghost__img {
+  object-fit: cover;
+  filter: grayscale(0.6) sepia(0.3) brightness(0.85) contrast(0.9);
+}
+
+.finale-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: clamp(9rem, 26svh, 16rem) max(1.5rem, env(safe-area-inset-right))
+    max(3rem, calc(env(safe-area-inset-bottom) + 2.5rem))
+    max(1.5rem, env(safe-area-inset-left));
+  text-align: center;
+}
+
+.finale-lines {
+  margin-top: clamp(10rem, 34svh, 20rem);
+}
+
+.finale-birthday {
+  margin-top: clamp(12rem, 42svh, 24rem);
+  font-size: clamp(2.3rem, 1.4rem + 3.8vw, 4.4rem);
+}
+
+.finale-birthday > .reveal-line {
+  transition-duration: 2.4s;
+}
+
+.finale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 1.75rem;
+  margin-top: clamp(8rem, 26svh, 14rem);
+}
+
+.finale-dedication {
+  margin-top: clamp(16rem, 60svh, 34rem);
+  padding-bottom: clamp(4rem, 16svh, 9rem);
+}
+
+.finale-dedication .type-meta {
+  margin: 0;
+  color: rgba(200, 168, 106, 0.58);
+  letter-spacing: 0.3em;
+  line-height: 2.1;
+}
+
+@keyframes ghost-dissolve {
+  0% { opacity: 0; transform: scale(1.05); }
+  13% { opacity: 0.12; }
+  33% { opacity: 0.12; }
+  46% { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finale-ghost {
+    animation: none;
+  }
+  .finale-ghost:first-child {
+    opacity: 0.08;
+  }
+}
+
+/* Chapter 02's photograph: its resting grade, and the overexposed state it
+   emerges from at the end of the entry warp. */
+.miracle-photo {
+  opacity: 0.2;
+  transition:
+    opacity 1.8s var(--ease-soft),
+    transform 2.4s var(--ease-cinematic),
+    filter 1.8s var(--ease-soft);
+}
+
+#miracle[data-emerge="light"] .miracle-photo {
+  opacity: 0.8;
+  transform: scale(1.06);
+  filter: brightness(2.1) saturate(0.35) blur(8px);
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry-warp {
+    display: none;
+  }
 }

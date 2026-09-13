@@ -59,6 +59,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#0c0b09",
   colorScheme: "dark",
+  // Lets the layout reach the physical screen edges on notched phones;
+  // every fixed control and edge-anchored block pads itself with
+  // env(safe-area-inset-*) in return.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
