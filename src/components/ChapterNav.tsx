@@ -34,7 +34,7 @@ function HiddenMessageRow({ index, isFound }: { index: number; isFound: boolean 
         aria-controls={messageId}
         className="block min-h-11 w-full rounded-[2px] px-3 py-2.5 text-left text-[0.8125rem] tracking-[0.08em] text-[rgba(221,211,197,0.7)] transition-colors hover:bg-white/[0.03] hover:text-foreground"
       >
-        <span className="mr-2 text-[10px] tracking-[0.24em] text-[rgba(200,168,106,0.8)]">
+        <span className="mr-2 text-[12px] tracking-[0.24em] text-[rgba(200,168,106,0.8)]">
           {String(index + 1).padStart(2, "0")}
         </span>
         {isFound ? `Hidden message ${index + 1}` : `Reveal hidden message ${index + 1}`}
@@ -102,7 +102,7 @@ export default function ChapterNav() {
           <span className="sr-only sm:hidden">Chapters and accessibility</span>
           <span aria-hidden="true" className="tabular-nums text-[rgba(200,168,106,0.8)]">
             {current.number}
-            <span className="text-[rgba(221,211,197,0.35)]"> / {String(chapters.length).padStart(2, "0")}</span>
+            <span className="text-[rgba(221,211,197,0.62)]"> / {String(chapters.length).padStart(2, "0")}</span>
           </span>
         </button>
 
@@ -135,13 +135,13 @@ export default function ChapterNav() {
                         : "border-transparent text-[rgba(221,211,197,0.78)] hover:bg-white/[0.03] hover:text-foreground"
                     }`}
                   >
-                    <span className="block text-[10px] tracking-[0.24em] opacity-70">
+                    <span className="block text-[12px] tracking-[0.24em] opacity-80">
                       {chapter.number}
                     </span>
                     <span className="block font-display text-[1.05rem] leading-tight">
                       {chapter.title}
                     </span>
-                    <span className="mt-0.5 block font-display text-[0.9rem] italic leading-snug opacity-70">
+                    <span className="mt-0.5 block font-display text-[0.9rem] italic leading-snug opacity-80">
                       {chapter.subtitle}
                     </span>
                   </button>

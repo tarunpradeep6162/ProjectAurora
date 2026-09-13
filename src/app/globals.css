@@ -276,7 +276,7 @@ body {
 /* Keyboard focus: a thin gold hairline held a few pixels off the element —
    clearly visible on the near-black ground without looking like a UI kit. */
 :where(a, button, summary, [tabindex]):focus-visible {
-  outline: 1.5px solid rgba(231, 205, 150, 0.95);
+  outline: 2px solid rgba(231, 205, 150, 0.95);
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -338,7 +338,8 @@ body {
 .type-meta {
   font-family: var(--font-body), sans-serif;
   font-weight: 400;
-  font-size: 0.6875rem;
+  /* 12px floor: tracked uppercase below this stops being legible on phones. */
+  font-size: 0.75rem;
   line-height: 1.6;
   letter-spacing: 0.34em;
   text-transform: uppercase;
@@ -416,7 +417,7 @@ body {
   background: rgba(7, 7, 6, 0.2);
   color: var(--aurora-ivory);
   font-family: var(--font-body), sans-serif;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
@@ -437,8 +438,9 @@ body {
   min-height: 2.75rem;
   padding: 0 0.25rem;
   color: rgba(221, 211, 197, 0.62);
+  cursor: pointer;
   font-family: var(--font-body), sans-serif;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
   text-decoration: underline;
@@ -480,7 +482,7 @@ html[data-aurora-hush] .chrome-recede {
   background: rgba(7, 7, 6, 0.62);
   color: rgba(221, 211, 197, 0.78);
   font-family: var(--font-body), sans-serif;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
   transition: color 0.4s var(--ease-soft), border-color 0.4s var(--ease-soft);
@@ -657,7 +659,7 @@ html[data-aurora-hush] .chrome-recede {
   border-radius: 2px;
   background: #080807;
   color: var(--aurora-ivory);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
 }
@@ -870,7 +872,7 @@ html[data-aurora-hush] .chrome-recede {
 }
 
 .opening-hint {
-  color: rgba(221, 211, 197, 0.42);
+  color: rgba(221, 211, 197, 0.62);
   letter-spacing: 0.3em;
 }
 
@@ -883,8 +885,8 @@ html[data-aurora-hush] .chrome-recede {
   right: max(0.85rem, env(safe-area-inset-right));
   margin: 0;
   writing-mode: vertical-rl;
-  color: rgba(200, 168, 106, 0.6);
-  font-size: 0.5625rem;
+  color: rgba(200, 168, 106, 0.8);
+  font-size: 0.75rem;
   translate: 0 -50%;
 }
 
@@ -894,7 +896,7 @@ html[data-aurora-hush] .chrome-recede {
     top: 2.35rem;
     right: 8vw;
     writing-mode: horizontal-tb;
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     translate: none;
   }
 }
@@ -1333,7 +1335,7 @@ html[data-aurora-hush] .chrome-recede {
 
 .candle-instruction {
   margin: 0;
-  color: rgba(221, 211, 197, 0.5);
+  color: rgba(221, 211, 197, 0.62);
   letter-spacing: 0.3em;
 }
 
@@ -1491,8 +1493,8 @@ html[data-aurora-hush] .chrome-recede {
 .hidden-star {
   position: absolute;
   z-index: 25;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   transform: translateY(-50%);
 }
 
@@ -1522,11 +1524,6 @@ html[data-aurora-hush] .chrome-recede {
   border-radius: 9999px;
   background: transparent;
   cursor: pointer;
-}
-
-.hidden-star__button:focus-visible {
-  outline: 1px solid rgba(215, 185, 122, 0.8);
-  outline-offset: 2px;
 }
 
 .hidden-star__point {
@@ -1695,6 +1692,26 @@ html[data-aurora-hush] .hidden-star {
   .memory-panel__caption {
     padding: 0 2.5rem 3.5rem;
   }
+}
+
+/* The photo's own gradient is sized to the photo, so a taller caption, or a
+   shorter frame (a 4:5 phone crop, a landscape phone), puts the upper lines
+   over bare photograph. This backing follows the caption instead: solid
+   behind every line, feathering out above and to the right so it never reads
+   as a box. The panel's overflow clip keeps the feather inside the frame. */
+.memory-panel__caption::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -4.5rem -7rem 0 0;
+  background: linear-gradient(
+    to top,
+    rgba(7, 7, 6, 0.8) calc(100% - 4.5rem),
+    rgba(7, 7, 6, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent);
+  pointer-events: none;
 }
 
 .memory-panel__title {
