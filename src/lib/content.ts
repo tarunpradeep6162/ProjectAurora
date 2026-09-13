@@ -187,11 +187,14 @@ export const loveLetter = {
 
 /** The birthday card and wish copy from the candle chapter. */
 export const birthdayCard = {
+  /** The name on the cake's gold plaque. */
+  name: "Dheepika",
   lines: [
     "May this year be as kind to you as you are to everyone else",
     "And may I be there for all of it",
   ],
   wishPrompt: "Make a wish",
+  wishAction: "Blow out the candles",
 };
 
 export type HiddenMessage = {

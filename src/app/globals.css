@@ -1127,6 +1127,50 @@ html[data-aurora-hush] .chrome-recede {
   cursor: default;
 }
 
+/* The 3D cake: a square stage, its canvas underneath, and a transparent
+   button over the whole of it as the control. */
+.candle-cake {
+  position: relative;
+  width: min(86vw, 30rem);
+  aspect-ratio: 1 / 1;
+}
+
+/* Feathered top and bottom, so the cake rises out of the dark and its smoke
+   thins away, rather than both being sliced by the canvas edge. The cake at
+   rest sits inside the solid band. */
+.candle-cake__canvas {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 9%, #000 90%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 9%, #000 90%, transparent 100%);
+}
+
+.candle-cake__button {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.candle-cake__button[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* The flames' warm falloff, centred where they burn (about 23% down). */
+.candle-cake > .candle__light {
+  position: absolute;
+  top: 23%;
+  bottom: auto;
+  left: 50%;
+  margin-top: -12rem;
+  pointer-events: none;
+}
+
 .candle > span,
 .candle > svg {
   position: absolute;

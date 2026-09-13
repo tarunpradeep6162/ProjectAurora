@@ -1,13 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useCoarsePointer } from "@/hooks/useMediaQuery";
+import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
+import { useLowPowerDevice } from "@/hooks/useLowPowerDevice";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
+import { useMotionEngineAlive } from "@/components/chapters/useMotionEngine";
+import { subscribeSceneFrame } from "@/components/cosmic/sceneProgress";
+import { FLAME_OUT_SECONDS } from "@/components/cake/cakeMotion";
 import { birthdayCard } from "@/lib/content";
 
-/** The flame bending, shrinking, flickering and going out. Mirrors `flame-out` in globals.css. */
-const FLAME_OUT_MS = 650;
+// WebGL has no server render, and Three.js should only download once the
+// chapter is close.
+const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas"), { ssr: false });
+
+/** The CSS candle's flame going out. Mirrors `flame-out` in globals.css. */
+const CSS_FLAME_OUT_MS = 650;
 /** Tuned: the held darkness once the flame has gone (brief: 800-1200ms). */
 const DARK_HOLD_MS = 950;
 /** One star, then another. */
@@ -16,8 +25,8 @@ const STARS_MS = 1500;
 const UNIVERSE_MS = 1100;
 
 /**
- * lit       → a single real-looking candle, near-black around it
- * out       → the flame bends, shrinks, flickers and goes out; a thread of smoke
+ * lit       → the cake rises into the dark and its candles light one by one
+ * out       → the flames flare and go out; smoke rises
  * dark      → held darkness (DARK_HOLD_MS); navigation has receded
  * stars     → one star, then another
  * universe  → the darkness lifts back into the sky
@@ -26,18 +35,50 @@ const UNIVERSE_MS = 1100;
 type Phase = "lit" | "out" | "dark" | "stars" | "universe" | "revealed";
 
 /**
+ * Where the stage is relative to the viewport: `near` latches once it is
+ * within a couple of screens (time to fetch and build the cake), `visible`
+ * tracks whether it is on screen right now (the canvas only renders then).
+ * Polled as well as scroll-driven, because scroll events and observers do
+ * not fire in every environment this site has to work in.
+ */
+function useStageProximity(ref: RefObject<HTMLElement | null>) {
+  const [near, setNear] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const h = window.innerHeight || 1;
+      if (r.top < h * 2.5 && r.bottom > -h * 1.5) setNear(true);
+      setVisible(r.top < h && r.bottom > 0);
+    };
+    const unsubscribe = subscribeSceneFrame(measure);
+    const poll = window.setInterval(measure, 300);
+    return () => {
+      unsubscribe();
+      window.clearInterval(poll);
+    };
+  }, [ref]);
+
+  return { near, visible };
+}
+
+/**
  * Chapter 7 — the candle.
  *
- * Physically plain: near-black, one candle, its own soft warm falloff and a
- * tiny instruction. Tapping or clicking the candle is the primary action
- * (it is a real `<button>` with a generous target); the microphone "blow"
- * detector stays strictly optional and is only offered on precise-pointer
- * devices, exactly as before.
+ * The birthday cake from the original Project Aurora, lit candles and all,
+ * rendered in its own small canvas. Where WebGL is unavailable, the device is
+ * low-powered, or frames are not being delivered, a single CSS candle takes
+ * its place. Either way the control is a real `<button>` with a generous
+ * target; the microphone "blow" detector stays strictly optional and is only
+ * offered on precise-pointer devices.
  *
  * Every phase change is a plain `setTimeout` writing a `data-phase`
- * attribute; all motion is CSS. Nothing waits on requestAnimationFrame, and
- * no text is ever hidden by an inline style. prefers-reduced-motion skips
- * the whole sequence and shows the wish at once.
+ * attribute. The story's text never waits on requestAnimationFrame and is
+ * never hidden by an inline style. prefers-reduced-motion skips the whole
+ * sequence and shows the wish at once.
  */
 export default function CandleInteraction() {
   const root = useRef<HTMLElement>(null);
@@ -47,6 +88,17 @@ export default function CandleInteraction() {
   >("idle");
   const reduced = useReducedMotion();
   const coarsePointer = useCoarsePointer();
+  const compact = useNarrowViewport();
+  const motionAlive = useMotionEngineAlive();
+  const lowPower = useLowPowerDevice();
+  const stageRef = useRef<HTMLDivElement>(null);
+  const cakeButtonRef = useRef<HTMLButtonElement>(null);
+  const { near, visible } = useStageProximity(stageRef);
+  const [cakeLost, setCakeLost] = useState(false);
+  const handleCakeLost = useCallback(() => setCakeLost(true), []);
+  // The 3D cake needs WebGL and a frame loop that actually delivers frames;
+  // without either, the CSS candle stands in so the wish still works.
+  const cake = motionAlive && !lowPower && !cakeLost;
   const blownRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -90,10 +142,13 @@ export default function CandleInteraction() {
     const at = (ms: number, fn: () => void) =>
       timersRef.current.push(window.setTimeout(fn, ms));
 
-    at(FLAME_OUT_MS, () => setPhase("dark"));
-    at(FLAME_OUT_MS + DARK_HOLD_MS, () => setPhase("stars"));
-    at(FLAME_OUT_MS + DARK_HOLD_MS + STARS_MS, () => setPhase("universe"));
-    at(FLAME_OUT_MS + DARK_HOLD_MS + STARS_MS + UNIVERSE_MS, () => {
+    // The cake's flames flare and die on their own curve; the darkness
+    // follows the moment they are out.
+    const flameOut = cake ? FLAME_OUT_SECONDS * 1000 : CSS_FLAME_OUT_MS;
+    at(flameOut, () => setPhase("dark"));
+    at(flameOut + DARK_HOLD_MS, () => setPhase("stars"));
+    at(flameOut + DARK_HOLD_MS + STARS_MS, () => setPhase("universe"));
+    at(flameOut + DARK_HOLD_MS + STARS_MS + UNIVERSE_MS, () => {
       setPhase("revealed");
       html.removeAttribute("data-aurora-hush");
     });
@@ -173,52 +228,80 @@ export default function CandleInteraction() {
         </p>
       </header>
 
-      <div className="candle-stage">
-        <button
-          type="button"
-          className="candle"
-          onClick={extinguish}
-          // aria-disabled rather than disabled: a disabled button drops
-          // keyboard focus to <body> the moment the flame goes out.
-          aria-disabled={!lit}
-          aria-label={
-            lit ? "Blow out the candle" : "The candle has been blown out"
-          }
-        >
-          <span aria-hidden="true" className="candle__light" />
-          <span aria-hidden="true" className="candle__flame">
-            <span className="candle__flame-shape">
-              <span className="candle__flame-edge" />
-              <span className="candle__flame-body" />
-              <span className="candle__flame-core" />
-              <span className="candle__flame-base" />
+      <div ref={stageRef} className="candle-stage">
+        {cake ? (
+          <div className="candle-cake">
+            <span aria-hidden="true" className="candle__light" />
+            {near && (
+              <div aria-hidden="true" className="candle-cake__canvas">
+                <CakeCanvas
+                  phase={phase}
+                  visible={visible}
+                  reduced={reduced}
+                  compact={compact}
+                  name={birthdayCard.name}
+                  eventSource={cakeButtonRef}
+                  onContextLost={handleCakeLost}
+                />
+              </div>
+            )}
+            <button
+              ref={cakeButtonRef}
+              type="button"
+              className="candle-cake__button"
+              onClick={extinguish}
+              aria-disabled={!lit}
+              aria-label={lit ? birthdayCard.wishAction : "The candles have been blown out"}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="candle"
+            onClick={extinguish}
+            // aria-disabled rather than disabled: a disabled button drops
+            // keyboard focus to <body> the moment the flame goes out.
+            aria-disabled={!lit}
+            aria-label={
+              lit ? "Blow out the candle" : "The candle has been blown out"
+            }
+          >
+            <span aria-hidden="true" className="candle__light" />
+            <span aria-hidden="true" className="candle__flame">
+              <span className="candle__flame-shape">
+                <span className="candle__flame-edge" />
+                <span className="candle__flame-body" />
+                <span className="candle__flame-core" />
+                <span className="candle__flame-base" />
+              </span>
             </span>
-          </span>
-          {!lit && (
-            <svg
-              aria-hidden="true"
-              className="candle__smoke"
-              viewBox="0 0 40 150"
-              fill="none"
-            >
-              <path
-                d="M20 150 C 17 132, 25 122, 20 106 S 12 80, 21 62 S 29 30, 18 0"
-                stroke="rgba(214, 206, 196, 0.5)"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
-          <span aria-hidden="true" className="candle__wick" />
-          <span aria-hidden="true" className="candle__wax" />
-        </button>
+            {!lit && (
+              <svg
+                aria-hidden="true"
+                className="candle__smoke"
+                viewBox="0 0 40 150"
+                fill="none"
+              >
+                <path
+                  d="M20 150 C 17 132, 25 122, 20 106 S 12 80, 21 62 S 29 30, 18 0"
+                  stroke="rgba(214, 206, 196, 0.5)"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span aria-hidden="true" className="candle__wick" />
+            <span aria-hidden="true" className="candle__wax" />
+          </button>
+        )}
 
         <div className="candle-caption" aria-live="polite">
           {lit ? (
             <>
               <p className="type-emotion candle-prompt">{birthdayCard.wishPrompt}</p>
               <p className="type-meta candle-instruction">
-                {coarsePointer ? "Tap to blow out the candle" : "Click to blow out the candle"}
+                {coarsePointer ? "Tap" : "Click"} to blow out{" "}
+                {cake ? "the candles" : "the candle"}
               </p>
               {micState === "idle" && !coarsePointer && (
                 <button type="button" onClick={enableMicBlow} className="btn-quiet">

@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import { useLowPowerDevice } from "@/hooks/useLowPowerDevice";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import {
   useCoarsePointer,
@@ -15,60 +16,6 @@ import type { CosmicTier } from "./CosmicScene";
 // is worth mounting at all (see the gating below). The `type` import above
 // is erased at build time and does not pull this chunk in early.
 const CosmicScene = dynamic(() => import("./CosmicScene"), { ssr: false });
-
-type NavigatorHints = Navigator & {
-  deviceMemory?: number;
-  connection?: { saveData?: boolean };
-};
-
-let lowPowerCache: boolean | null = null;
-
-/**
- * "Should this device get the CSS sky instead of WebGL at all?" — the fourth,
- * low-power tier. Deliberately conservative: only clear signals count.
- *
- *  - Data Saver is on.
- *  - Two or fewer logical cores, or 2GB or less of device memory (Chromium
- *    exposes this; other engines simply don't contribute the signal).
- *  - No WebGL, or WebGL that the browser itself says would carry a major
- *    performance caveat (software rendering / a blocklisted GPU). The probe
- *    context is released immediately.
- *
- * Measured once per page load and cached, so it is safe to call from a
- * `useSyncExternalStore` snapshot.
- */
-function detectLowPower(): boolean {
-  if (lowPowerCache !== null) return lowPowerCache;
-  const nav = navigator as NavigatorHints;
-  let low = false;
-  if (nav.connection?.saveData) {
-    low = true;
-  } else if (nav.hardwareConcurrency > 0 && nav.hardwareConcurrency <= 2) {
-    low = true;
-  } else if (typeof nav.deviceMemory === "number" && nav.deviceMemory > 0 && nav.deviceMemory <= 2) {
-    low = true;
-  } else {
-    try {
-      const canvas = document.createElement("canvas");
-      const attrs: WebGLContextAttributes = { failIfMajorPerformanceCaveat: true };
-      const gl: WebGLRenderingContext | WebGL2RenderingContext | null =
-        canvas.getContext("webgl2", attrs) ?? canvas.getContext("webgl", attrs);
-      if (gl) gl.getExtension("WEBGL_lose_context")?.loseContext();
-      else low = true;
-    } catch {
-      low = true;
-    }
-  }
-  lowPowerCache = low;
-  return low;
-}
-
-const subscribeNever = () => () => {};
-
-/** Static per-visit signal; the server snapshot keeps the canvas off until hydration. */
-function useLowPowerDevice(): boolean {
-  return useSyncExternalStore(subscribeNever, detectLowPower, () => true);
-}
 
 /**
  * Ported from the Vite/R3F sibling project's `src/scene/CosmicCanvas.jsx`
