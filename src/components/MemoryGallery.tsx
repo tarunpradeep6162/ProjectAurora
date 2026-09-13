@@ -97,7 +97,7 @@ export default function MemoryGallery() {
         <ul className="sr-only">
           {memories.map((memory) => (
             <li key={memory.id}>
-              {memory.title} — {memory.caption}
+              {memory.title}, {memory.place}. {memory.caption} {memory.note}
             </li>
           ))}
         </ul>
@@ -137,9 +137,12 @@ export default function MemoryGallery() {
             >
               <p className="type-meta">
                 {String(i + 1).padStart(2, "0")} / {String(memories.length).padStart(2, "0")}
+                <span aria-hidden="true" className="memory-panel__sep" />
+                {memory.place}
               </p>
               <h3 className="type-emotion memory-panel__title">{memory.title}</h3>
               <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
+              <p className="type-story memory-panel__note max-w-xs">{memory.note}</p>
             </figcaption>
           </figure>
         ))}

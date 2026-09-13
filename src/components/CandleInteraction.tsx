@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useCoarsePointer } from "@/hooks/useMediaQuery";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
+import { birthdayCard } from "@/lib/content";
 
 /** The flame bending, shrinking, flickering and going out. Mirrors `flame-out` in globals.css. */
 const FLAME_OUT_MS = 650;
@@ -215,6 +216,7 @@ export default function CandleInteraction() {
         <div className="candle-caption" aria-live="polite">
           {lit ? (
             <>
+              <p className="type-emotion candle-prompt">{birthdayCard.wishPrompt}</p>
               <p className="type-meta candle-instruction">
                 {coarsePointer ? "Tap to blow out the candle" : "Click to blow out the candle"}
               </p>
@@ -239,9 +241,13 @@ export default function CandleInteraction() {
             </>
           ) : (
             phase === "revealed" && (
-              <p className="type-emotion candle-wish">
-                Make a wish. It already came true.
-              </p>
+              <div className="candle-wish candle-card">
+                {birthdayCard.lines.map((line) => (
+                  <p key={line} className="type-emotion">
+                    {line}
+                  </p>
+                ))}
+              </div>
             )
           )}
         </div>

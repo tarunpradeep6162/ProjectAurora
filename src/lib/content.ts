@@ -1,11 +1,14 @@
-// Real content for Project Aurora, sourced faithfully from the master creative
-// brief. Nothing here is placeholder copy — it is Tarun's real story, kept as-is.
+// Real content for Project Aurora, sourced word for word from Tarun's deployed
+// site (frontend-woad-pi-12.vercel.app) — including lines that only appear
+// after an interaction there (hidden messages, photo notes, the birthday card),
+// which were missed when this site was first rebuilt from the visible page.
+// Nothing here is placeholder copy — it is Tarun's real story, kept as-is.
 
 export type Chapter = {
   id: string;
   number: string;
   title: string;
-  hiddenMessage: string;
+  subtitle: string;
 };
 
 export const chapters: Chapter[] = [
@@ -13,56 +16,56 @@ export const chapters: Chapter[] = [
     id: "portal",
     number: "01",
     title: "Enter the universe",
-    hiddenMessage:
+    subtitle:
       "A portal opens into a world made from love, light and memory.",
   },
   {
     id: "miracle",
     number: "02",
     title: "You are my favourite miracle",
-    hiddenMessage:
+    subtitle:
       "A cinematic beginning for the person who made ordinary days feel extraordinary.",
   },
   {
     id: "story",
     number: "03",
     title: "Our story became a world",
-    hiddenMessage:
+    subtitle:
       "Every conversation, every smile and every small moment left a light behind.",
   },
   {
     id: "journey",
     number: "04",
     title: "The journey between us",
-    hiddenMessage:
+    subtitle:
       "Not a straight line, but a glowing path of memories, growth and choosing each other.",
   },
   {
     id: "memories",
     number: "05",
     title: "Memories suspended in time",
-    hiddenMessage:
+    subtitle:
       "Moments drift around us like photographs that never learned how to fade.",
   },
   {
     id: "letter",
     number: "06",
     title: "A letter from my heart",
-    hiddenMessage:
+    subtitle:
       "Some feelings deserve more than a message. They deserve a universe of their own.",
   },
   {
     id: "birthday",
     number: "07",
     title: "Happy Birthday, Dheepika",
-    hiddenMessage:
+    subtitle:
       "May this new year of your life carry wonder, peace, laughter and all the love you deserve.",
   },
   {
     id: "finale",
     number: "08",
     title: "And this is only the beginning",
-    hiddenMessage:
+    subtitle:
       "The universe grows quiet, but our story continues beyond the final star.",
   },
 ];
@@ -108,6 +111,10 @@ export type Memory = {
   height: number;
   title: string;
   caption: string;
+  /** The small line that stood in for a date on the original site. */
+  place: string;
+  /** Tarun's personal note on the photograph. */
+  note: string;
 };
 
 export const memories: Memory[] = [
@@ -116,42 +123,52 @@ export const memories: Memory[] = [
     src: "/images/memories/memory-1.jpg",
     width: 1600,
     height: 1067,
-    title: "The Blue Himalayan.",
+    title: "The Blue Himalayan",
     caption: "The bike that carried most of the good stories.",
+    place: "Somewhere green",
+    note: "Every road on this list started here.",
   },
   {
     id: "memory-2",
     src: "/images/memories/memory-2.jpg",
     width: 1240,
     height: 1245,
-    title: "Travel With Your Soul.",
+    title: "Travel With Your Soul",
     caption: "Panniers on, rain in the hills, nowhere in particular to be.",
+    place: "Loaded up and gone",
+    note: "The best trips were never the planned ones.",
   },
   {
     id: "memory-3",
     src: "/images/memories/memory-3.jpg",
     width: 1240,
     height: 1554,
-    title: "Cold Morning, Warm Coffee.",
+    title: "Cold Morning, Warm Coffee",
     caption: "Helmet on, gloves on, the road still waking up.",
+    place: "Somewhere up in the ghats",
+    note: "You always said I looked ridiculous in that hoodie.",
   },
   {
     id: "memory-4",
     src: "/images/memories/memory-4.jpg",
     width: 1400,
     height: 800,
-    title: "Somewhere We Got Lost.",
+    title: "Somewhere We Got Lost",
     caption:
       "Neither of us knew where we were, and neither of us seemed to mind.",
+    place: "Somewhere far from home",
+    note: "I would get lost with you again tomorrow.",
   },
   {
     id: "memory-5",
     src: "/images/memories/memory-5.jpg",
     width: 800,
     height: 800,
-    title: "The One I Would Keep.",
+    title: "The One I Would Keep",
     caption:
       "If I were only allowed to keep one of these, it would be this one.",
+    place: "A night worth keeping",
+    note: "Out of all of it. This one.",
   },
 ];
 
@@ -167,6 +184,38 @@ export const loveLetter = {
   signature: "Tarun",
   closingDetail: "You turned the page over. Of course you did.",
 };
+
+/** The birthday card and wish copy from the candle chapter. */
+export const birthdayCard = {
+  lines: [
+    "May this year be as kind to you as you are to everyone else",
+    "And may I be there for all of it",
+  ],
+  wishPrompt: "Make a wish",
+};
+
+export type HiddenMessage = {
+  /**
+   * Position along the whole story, 0-1, as authored on the original site.
+   * Eight messages across eight chapters: `floor(position * 8)` lands exactly
+   * one message in each chapter, in order.
+   */
+  position: number;
+  /** Which margin it sits in — the original alternated sides. */
+  side: "left" | "right";
+  message: string;
+};
+
+export const hiddenMessages: HiddenMessage[] = [
+  { position: 0.09, side: "left", message: "You are the best thing that ever happened to me by accident." },
+  { position: 0.21, side: "right", message: "I still get nervous before I see you. I hope that never stops." },
+  { position: 0.34, side: "left", message: "You make me want to be someone worth staying with." },
+  { position: 0.46, side: "right", message: "Thank you for being patient with me on the days I was not easy." },
+  { position: 0.58, side: "left", message: "I would choose this again. All of it. Without thinking." },
+  { position: 0.69, side: "right", message: "You are the person I want to tell things to first." },
+  { position: 0.83, side: "left", message: "I am so proud of you. I hope you know that already." },
+  { position: 0.95, side: "right", message: "Whatever comes next, I am not going anywhere." },
+];
 
 export const site = {
   title: "Project Aurora",

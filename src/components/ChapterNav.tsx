@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chapters } from "@/lib/content";
+import { chapters, hiddenMessages } from "@/lib/content";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
+import { markMessageFound, useFoundMessages } from "@/components/HiddenMessages";
 
 /**
  * Accessibility & Chapters panel.
  *
  * A genuine navigation + accessibility feature:
  *  - Keyboard operable (Tab / Enter / Space) chapter jump list, 44px rows.
- *  - Every chapter's "hidden message" is exposed as real text here, for
- *    screen-reader users and anyone who does not trigger the equivalent
- *    reveal in the chapter itself.
+ *  - Tarun's eight hidden messages, revealable here as plain text, so
+ *    nobody has to find a star in the page to read them. Found-state is
+ *    shared with the stars.
  *  - ESC closes the panel and returns focus to its button.
  *  - Reports the active chapter through an ARIA live region.
  *
@@ -21,8 +22,37 @@ import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
  * gone, and so are the pill shape and the frosted glass. The control
  * recedes entirely while the candle holds its darkness (`.chrome-recede`).
  */
+function HiddenMessageRow({ index, isFound }: { index: number; isFound: boolean }) {
+  const messageId = `hidden-message-text-${index}`;
+  // The button stays mounted once revealed so keyboard focus is never dropped.
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => markMessageFound(index)}
+        aria-expanded={isFound}
+        aria-controls={messageId}
+        className="block min-h-11 w-full rounded-[2px] px-3 py-2.5 text-left text-[0.8125rem] tracking-[0.08em] text-[rgba(221,211,197,0.7)] transition-colors hover:bg-white/[0.03] hover:text-foreground"
+      >
+        <span className="mr-2 text-[10px] tracking-[0.24em] text-[rgba(200,168,106,0.8)]">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        {isFound ? `Hidden message ${index + 1}` : `Reveal hidden message ${index + 1}`}
+      </button>
+      <p
+        id={messageId}
+        hidden={!isFound}
+        className="px-3 pb-3 font-display text-[0.95rem] italic leading-snug text-[rgba(241,236,227,0.86)]"
+      >
+        {hiddenMessages[index].message}
+      </p>
+    </div>
+  );
+}
+
 export default function ChapterNav() {
   const [open, setOpen] = useState(false);
+  const foundMessages = useFoundMessages();
   const reduced = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -90,8 +120,7 @@ export default function ChapterNav() {
           >
             <h2 className="type-meta mb-2 px-2">Chapters</h2>
             <p className="type-story mb-3 px-2 text-[0.8125rem] leading-relaxed text-[rgba(221,211,197,0.6)]">
-              Jump to any chapter. Each entry also carries its hidden message
-              in text — available regardless of motion settings.
+              Jump to any chapter.
             </p>
             <ol>
               {chapters.map((chapter, i) => (
@@ -113,12 +142,34 @@ export default function ChapterNav() {
                       {chapter.title}
                     </span>
                     <span className="mt-0.5 block font-display text-[0.9rem] italic leading-snug opacity-70">
-                      {chapter.hiddenMessage}
+                      {chapter.subtitle}
                     </span>
                   </button>
                 </li>
               ))}
             </ol>
+            <section
+              aria-labelledby="hidden-messages-heading"
+              className="mt-4 border-t border-[rgba(215,185,122,0.16)] pt-4"
+            >
+              <h2 id="hidden-messages-heading" className="type-meta mb-2 px-2">
+                Hidden messages
+              </h2>
+              <p
+                className="type-story mb-2 px-2 text-[0.8125rem] leading-relaxed text-[rgba(221,211,197,0.6)]"
+                aria-live="polite"
+              >
+                {foundMessages.length} of {hiddenMessages.length} found among the
+                stars.
+              </p>
+              <ol>
+                {hiddenMessages.map((m, i) => (
+                  <li key={m.message}>
+                    <HiddenMessageRow index={i} isFound={foundMessages.includes(i)} />
+                  </li>
+                ))}
+              </ol>
+            </section>
             <div className="type-story mt-3 border-t border-[rgba(215,185,122,0.16)] px-2 pt-3 text-[0.75rem] leading-relaxed text-[rgba(221,211,197,0.6)]">
               Reduced motion is currently{" "}
               <strong className="font-normal text-accent-soft">

@@ -9,6 +9,7 @@ import MemoryGallery from "@/components/MemoryGallery";
 import LoveLetter from "@/components/LoveLetter";
 import CandleInteraction from "@/components/CandleInteraction";
 import ChapterFinale from "@/components/chapters/ChapterFinale";
+import HiddenMessages from "@/components/HiddenMessages";
 
 export default function Home() {
   return (
@@ -30,6 +31,7 @@ export default function Home() {
         <CandleInteraction />
         <ChapterFinale />
       </main>
+      <HiddenMessages />
     </>
   );
 }
