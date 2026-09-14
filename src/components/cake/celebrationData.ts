@@ -1,9 +1,12 @@
 /**
  * The post-wish celebration, ported from the original Project Aurora's
- * heart/infinity/butterfly star-shapes and falling confetti. Positions and
- * scales are re-tuned for this cake canvas's tight, close-up camera (the
- * original staged them across a whole open sky); the shapes, colours,
- * particle counts and timing curves are the original's.
+ * heart/infinity/butterfly star-shapes and falling confetti. Shapes and
+ * timing curves are the original's; positions and scale are re-tuned for
+ * this cake canvas's tight, close-up camera (the original staged them
+ * across a whole open sky). Colour and quantity are deliberately restrained
+ * from the original's — champagne, ivory and dusty rose only, fewer bursts,
+ * less confetti — so this stays the quiet edge of a cosmic scene rather
+ * than becoming a generic party-microsite moment.
  */
 
 export type ShapeKind = "heart" | "infinity" | "butterfly";
@@ -73,17 +76,16 @@ export type ShapeBurst = {
 };
 
 /**
- * Six burst slots in the original (three on phones); re-placed to sit around
- * and above the cake within this canvas's tight framing instead of the
- * original's wide-open sky.
+ * Six burst slots in the original, in a full rainbow of colour; trimmed to
+ * four here (two on phones) and recoloured to champagne, dusty rose and
+ * ivory only — plenty of dark, empty sky between them rather than a
+ * screen full of shapes.
  */
 export const SHAPE_BURSTS: ShapeBurst[] = [
-  { position: [-1.5, 2.4, -0.6], scale: 0.5, shape: "heart", color: "#ff8dc3" },
-  { position: [1.4, 2.9, -1.1], scale: 0.62, shape: "infinity", color: "#ffd98a" },
-  { position: [0.1, 3.6, -1.6], scale: 0.72, shape: "butterfly", color: "#9ad4ff" },
-  { position: [-1.9, 3.2, -1.8], scale: 0.66, shape: "heart", color: "#c9a6ff" },
-  { position: [1.7, 1.9, -0.3], scale: 0.46, shape: "infinity", color: "#ffb3d9" },
-  { position: [-0.4, 4.1, -2.2], scale: 0.8, shape: "butterfly", color: "#8fe6b8" },
+  { position: [-1.5, 2.4, -0.6], scale: 0.46, shape: "heart", color: "#b6738f" },
+  { position: [1.4, 2.9, -1.1], scale: 0.56, shape: "infinity", color: "#d7b97a" },
+  { position: [0.1, 3.6, -1.6], scale: 0.6, shape: "butterfly", color: "#f0e8e1" },
+  { position: [-1.9, 3.2, -1.8], scale: 0.5, shape: "heart", color: "#8c526e" },
 ];
 
 export type ConfettiKind = {
@@ -92,12 +94,17 @@ export type ConfettiKind = {
   spin: number;
 };
 
-/** Four thin-plane confetti "kinds", ratios and colours the original's. */
+/**
+ * Four thin-plane confetti "kinds", ratios and spin the original's; colour
+ * recentred on champagne, ivory and dusty rose (the original mixed in a
+ * pale blue and a brighter pink — dropped, for the same reason as the
+ * shape bursts above).
+ */
 export const CONFETTI_KINDS: ConfettiKind[] = [
-  { scale: [0.055, 0.055, 0.012], color: "#dff0ff", spin: 1.6 },
-  { scale: [0.09, 0.05, 0.02], color: "#ffc3e0", spin: 0.7 },
-  { scale: [0.03, 0.16, 0.01], color: "#e8c98f", spin: 1.1 },
-  { scale: [0.045, 0.045, 0.045], color: "#fff2c8", spin: 2 },
+  { scale: [0.055, 0.055, 0.012], color: "#f0e8e1", spin: 1.6 },
+  { scale: [0.09, 0.05, 0.02], color: "#b6738f", spin: 0.7 },
+  { scale: [0.03, 0.16, 0.01], color: "#d7b97a", spin: 1.1 },
+  { scale: [0.045, 0.045, 0.045], color: "#e8dcc4", spin: 2 },
 ];
 
 /** Confetti falls between these two heights, local to the cake canvas. */

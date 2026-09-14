@@ -11,8 +11,8 @@ import {
   type ShapeBurst,
 } from "./celebrationData";
 
-/** Points per burst. */
-const COUNT = 90;
+/** Points per burst — restrained rather than dense, so each shape reads as a light fragment, not a solid glyph. */
+const COUNT = 55;
 
 /**
  * How long after the wish each burst starts (staggered), and how long each
@@ -169,7 +169,7 @@ export default function ShapeBursts({
   reduced: boolean;
   compact: boolean;
 }) {
-  const bursts = compact ? SHAPE_BURSTS.slice(0, 3) : SHAPE_BURSTS;
+  const bursts = compact ? SHAPE_BURSTS.slice(0, 2) : SHAPE_BURSTS;
   return (
     <>
       {bursts.map((burst, i) => (

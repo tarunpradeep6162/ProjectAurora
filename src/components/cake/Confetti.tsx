@@ -38,7 +38,7 @@ function buildPieces(count: number): Piece[] {
     x: (Math.random() - 0.5) * 4.4,
     z: (Math.random() - 0.5) * 2.6 - 0.4,
     offset: Math.random(),
-    fallSpeed: 0.5 + Math.random() * 1.1,
+    fallSpeed: 0.32 + Math.random() * 0.7,
     swayAmp: 0.12 + Math.random() * 0.3,
     swayFreq: 0.4 + Math.random() * 0.8,
     spinPhase: Math.random() * Math.PI * 2,
@@ -48,8 +48,10 @@ function buildPieces(count: number): Piece[] {
 /**
  * Falling confetti after the wish, ported from the original — thin coloured
  * planes rather than simulated paper, looping continuously rather than
- * firing once. Count is reduced from the original's 220/90 to keep this
- * scene's frame budget headroom alongside the cake and candles.
+ * firing once. Count is well down from the original's 220/90 (first to
+ * 120/60, now 64/32): a restrained scatter of champagne/rose/ivory light,
+ * not a party-cannon burst, and plenty of headroom for the cake, candles
+ * and the persistent galaxy alongside it.
  */
 export default function Confetti({
   motion,
@@ -62,7 +64,7 @@ export default function Confetti({
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const coloredRef = useRef(false);
-  const count = compact ? 60 : 120;
+  const count = compact ? 32 : 64;
   const pieces = useMemo(() => buildPieces(count), [count]);
   const range = CONFETTI_TOP - CONFETTI_BOTTOM;
 
