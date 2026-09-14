@@ -76,6 +76,10 @@ export default function MemoryGallery() {
       aria-labelledby="memories-title"
       className="relative w-full bg-transparent"
     >
+      {/* The journey's dust, arriving as light — see .memories-arrival in
+          globals.css and --seam-arrival in CosmicAtmosphere.tsx. */}
+      <span className="memories-arrival" aria-hidden="true" />
+
       <div className="relative z-10 px-[max(1.5rem,env(safe-area-inset-left))] pt-32 pb-16 text-center sm:px-6">
         <p className="type-meta" data-reveal="fade">
           Chapter 05

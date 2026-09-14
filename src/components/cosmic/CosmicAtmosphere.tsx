@@ -25,6 +25,12 @@ const SEAMS = [
   // the constellation's remembered points release and travel forward into
   // the path. Drives CosmicPath's convergence.
   { varName: "--seam-constellation", at: "journey", range: 0.9 },
+  // Chapter 04 (the journey's dust) into Chapter 05 (the real photographs):
+  // the road's last warmth becomes the light the first photograph arrives
+  // in — the same "road becomes memory" idea CosmicPath already carries at
+  // the 03/04 seam, continued one boundary further, toward the chapter that
+  // actually holds the photographs.
+  { varName: "--seam-arrival", at: "memories", range: 0.8 },
   // Chapter 05 (photographs) into Chapter 06 (the letter): motion slows,
   // the sky dims, the background warms, and the letter emerges — the
   // external universe becoming an internal one.
@@ -37,6 +43,7 @@ const SEAMS = [
 
 const RESET: Record<string, string> = {
   "--seam-constellation": "0",
+  "--seam-arrival": "0",
   "--seam-inward": "0",
   "--seam-lastlight": "0",
   "--seam-lastlight-drift": "0",

@@ -48,6 +48,7 @@
 
   /* 0-1 weights, each peaking on one chapter boundary. */
   --seam-constellation: 0;
+  --seam-arrival: 0;
   --seam-inward: 0;
   --seam-lastlight: 0;
   --seam-lastlight-drift: 0;
@@ -235,6 +236,10 @@ body {
   z-index: -1;
   pointer-events: none;
   opacity: var(--path-in, 0);
+  /* A very small "coming closer" cue exactly where `--path-in` itself peaks
+     (the chapter's own centre) — the journey's one deepest moment, without
+     a second scroll-driven variable to compute it. */
+  transform: scale(calc(1 + var(--path-in, 0) * 0.04));
 }
 
 .cosmic-path__dust {
@@ -1680,6 +1685,31 @@ html[data-aurora-hush] .hidden-star {
 }
 
 /* ======================================================== MEMORIES ====== */
+
+/* The journey's dust arriving as light: a soft, localized glow behind this
+   chapter's own opening words, peaking exactly on the chapter 04/05
+   boundary (--seam-arrival, CosmicAtmosphere.tsx) and gone again well
+   before "Chapter 05" is actually being read. Same restrained rose/gold
+   the dust itself carries — never a wash over the photographs below. */
+.memories-arrival {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 60svh;
+  pointer-events: none;
+  opacity: calc(var(--seam-arrival, 0) * 0.5);
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    rgba(140, 82, 110, 0.4),
+    rgba(215, 184, 122, 0.12) 55%,
+    transparent 80%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memories-arrival {
+    display: none;
+  }
+}
 
 .memory-flow {
   display: flex;
