@@ -284,7 +284,12 @@ export default function ChapterPortal() {
         </p>
 
         <div data-o="cta" className="opening-cta">
-          <button type="button" onClick={beginJourney} className="btn-cinema">
+          <button
+            type="button"
+            onClick={beginJourney}
+            className="btn-cinema"
+            data-cursor="enter"
+          >
             Begin the Journey
           </button>
           <span className="type-meta opening-hint" aria-hidden="true">

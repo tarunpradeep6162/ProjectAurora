@@ -260,6 +260,7 @@ export default function CandleInteraction() {
               onClick={extinguish}
               aria-disabled={!lit}
               aria-label={lit ? birthdayCard.wishAction : "The candles have been blown out"}
+              data-cursor={lit ? "wish" : undefined}
             />
           </div>
         ) : (
@@ -273,6 +274,7 @@ export default function CandleInteraction() {
             aria-label={
               lit ? "Blow out the candle" : "The candle has been blown out"
             }
+            data-cursor={lit ? "wish" : undefined}
           >
             <span aria-hidden="true" className="candle__light" />
             <span aria-hidden="true" className="candle__flame">

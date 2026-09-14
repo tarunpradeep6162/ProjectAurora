@@ -5,6 +5,7 @@ import ReducedMotionRoot from "@/components/ReducedMotionRoot";
 import MotionSafetyNet from "@/components/MotionSafetyNet";
 import SmoothScroll from "@/components/SmoothScroll";
 import CosmicAtmosphere from "@/components/cosmic/CosmicAtmosphere";
+import CinematicCursor from "@/components/CinematicCursor";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -99,6 +100,7 @@ export default function RootLayout({
         </a>
         <div className="vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
+        <CinematicCursor />
         {children}
       </body>
     </html>

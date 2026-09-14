@@ -486,6 +486,59 @@ html[data-finale-hush] .chrome-recede {
   transition: opacity 0.5s var(--ease-soft), visibility 0s linear 0.5s;
 }
 
+/* Contextual cursor label (CinematicCursor.tsx) — fine-pointer desktop
+   only, scoped to exactly two moments (`data-cursor="enter" | "wish"`).
+   Position is written straight to --cx/--cy on pointermove; only the
+   dot/label's own opacity reacts to React state, so this never re-renders
+   on movement. Kept small on purpose — this is an accent, not a replacement
+   for the system cursor, so the native cursor stays visible underneath. */
+.cinematic-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-soft);
+}
+
+.cinematic-cursor[data-active] {
+  opacity: 1;
+}
+
+.cinematic-cursor__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--accent-soft);
+  box-shadow: 0 0 8px rgba(215, 185, 122, 0.6);
+  transform: scale(0.4);
+  transition: transform 0.35s var(--ease-soft);
+}
+
+.cinematic-cursor[data-active] .cinematic-cursor__dot {
+  transform: scale(1);
+}
+
+.cinematic-cursor__label {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.6875rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(241, 236, 227, 0.86);
+  white-space: nowrap;
+  transform: translateX(-4px);
+  transition: transform 0.35s var(--ease-soft);
+}
+
+.cinematic-cursor[data-active] .cinematic-cursor__label {
+  transform: translateX(0);
+}
+
 .chrome-button {
   display: inline-flex;
   align-items: center;
