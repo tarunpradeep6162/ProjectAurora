@@ -8,12 +8,32 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
 /**
  * Chapter 03's centrepiece: a real WebGL living-wall of plants, straight
- * ahead of the camera and vertically centred, that the story's five
- * timeline entries slowly turn past as the visitor scrolls — the
- * persistent-3D-object-anchoring-a-scrolling-narrative feel of a site like
- * Active Theory's, reinterpreted here as this project's own image (a
- * vertical garden, matched against a reference photo of one) rather than
- * anything copied from theirs.
+ * ahead of the camera and vertically centred, that grows through five
+ * distinct phases — one per timeline entry — as the visitor scrolls, and
+ * turns slowly as it does. Checked directly against activetheory.net/work
+ * for what to reinterpret: not their floating project-card gallery or its
+ * UI chrome (a "WORK / CONTACT" nav, prev/next arrows, an AI search box
+ * belong to their portfolio, not a love story), but the underlying
+ * qualities — a persistent, lit 3D object the scroll narrative stages
+ * itself around, softened depth behind it, and small drifting bloom-lit
+ * particles giving the piece a lived-in, gallery-installation quality
+ * rather than a static prop. Reinterpreted as this project's own image (a
+ * vertical garden, matched against a reference photo of one), not copied
+ * from theirs.
+ *
+ * "3, 4, 5 phases combined": every leaf and blossom is assigned one of the
+ * five timeline entries (`phase`, 1-5) at build time. It stays scaled to
+ * zero — ungrown — until `chapterProgress` (the same 0-1 value
+ * ChapterTimeline.tsx's own ScrollTrigger scrubs its five captions with)
+ * reaches that phase's band of the chapter, then grows in with a short
+ * smoothstep pop, staggered slightly within the band
+ * (`phaseLocalOrder`) so a whole phase doesn't snap in as one unit. The
+ * wall is sparse and small at "01 — First meeting" and fully lush,
+ * blossoms included, by "05 — Celebration" — the story and the garden
+ * growing together, not a decorative backdrop that happens to also be
+ * there. Purely a function of scroll position (not accumulated time), so
+ * scrolling back up ungrows it the same way it grew, matching every other
+ * scrubbed animation on this site.
  *
  * Positioned dynamically every frame from the live camera (`camera.
  * getWorldDirection` + `camera.position`), not a hand-picked static world
@@ -22,21 +42,18 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  * straight ahead of camera" has to be computed live to actually stay
  * centred and straight rather than only being correct at one scroll
  * position. `group.lookAt(camera.position)` every frame keeps its flat
- * face turned toward the viewer the same way.
- *
- * "Rolling with each story": chapterProgress (0-1 across the whole pinned
- * chapter, the same value ChapterTimeline.tsx's own ScrollTrigger scrubs
- * its five captions with) drives a slow continuous turn on top of a very
- * small idle spin — so the wall visibly turns further with every story
- * beat the visitor scrolls through, scrub-tied rather than snapping per
- * entry, matching this project's own GSAP-scrub convention elsewhere.
+ * face turned toward the viewer the same way. A slow idle turn plus real
+ * scroll-scrubbed rotation on top means it also visibly turns further
+ * with every phase, so no single angle of it is ever "the" view.
  *
  * Built from the same primitives as the rest of this scene: two
  * `InstancedMesh` leaf shapes (a slender fern blade and a rounder broad
  * leaf, both the curved-`ShapeGeometry` technique `TulipGarden.tsx`
  * established for foliage) plus a sparse third layer of small pale
- * blossoms — a quiet, deliberate romantic touch, not the reference photo's
- * literal content — over a simple warm-wood planter box.
+ * blossoms (phases 4-5 only — the relationship, and the wall, blooming
+ * together near the end) over a simple warm-wood planter box, and a small
+ * drifting bokeh-particle layer (`buildSparkles`) for the gallery-lit
+ * quality noted above.
  */
 const SEED = 20251125; // this project's own recurring seed (25 November).
 function seededRandom(seed: number): () => number {
@@ -114,6 +131,11 @@ const LEAF_GREENS: THREE.Color[] = [
 const BLOSSOM_COLOR = new THREE.Color("#f3e3d8");
 const WOOD_COLOR = new THREE.Color("#8a6640");
 
+// Five growth phases, one per timeline entry (ChapterTimeline.tsx's
+// `timeline` array in content.ts is always length 5) — an equal-width band
+// of chapterProgress per phase.
+const PHASE_COUNT = 5;
+
 type LeafDatum = {
   x: number;
   y: number;
@@ -124,6 +146,8 @@ type LeafDatum = {
   scale: number;
   kind: 0 | 1;
   colorIdx: number;
+  phase: number; // 1-5
+  phaseLocalOrder: number; // 0-1, staggers pop-in within its phase band
 };
 
 function buildLeaves(count: number): LeafDatum[] {
@@ -134,11 +158,17 @@ function buildLeaves(count: number): LeafDatum[] {
     const x = (rand() - 0.5) * WALL_WIDTH * 1.02;
     // Denser toward the bottom (where the planter feeds it) and a soft
     // taper at the very top edge, rather than a hard-edged rectangle of
-    // foliage.
+    // foliage. Earlier phases are seeded lower on the wall (a young plant
+    // starts near the planter), later phases fill in the upper reaches —
+    // biasing phase by height, not assigning it independently of position,
+    // so the wall visibly builds upward as it grows rather than sprouting
+    // uniformly all over at once.
     const yRaw = rand();
     const y = (yRaw - 0.5) * WALL_HEIGHT;
     const edgeFade = 1 - Math.pow(Math.abs(x) / halfW, 3) * 0.4;
     if (rand() > edgeFade) continue;
+    const heightBias = yRaw * 0.7 + rand() * 0.3;
+    const phase = Math.min(PHASE_COUNT, 1 + Math.floor(heightBias * PHASE_COUNT));
     leaves.push({
       x,
       y,
@@ -149,12 +179,21 @@ function buildLeaves(count: number): LeafDatum[] {
       scale: 0.7 + rand() * 0.7,
       kind: rand() < 0.5 ? 0 : 1,
       colorIdx: Math.floor(rand() * LEAF_GREENS.length),
+      phase,
+      phaseLocalOrder: rand(),
     });
   }
   return leaves;
 }
 
-type BlossomDatum = { x: number; y: number; z: number; scale: number };
+type BlossomDatum = {
+  x: number;
+  y: number;
+  z: number;
+  scale: number;
+  phase: number;
+  phaseLocalOrder: number;
+};
 function buildBlossoms(count: number): BlossomDatum[] {
   const rand = seededRandom(SEED + count + 7);
   const blossoms: BlossomDatum[] = [];
@@ -164,9 +203,37 @@ function buildBlossoms(count: number): BlossomDatum[] {
       y: (rand() - 0.5) * WALL_HEIGHT * 0.85,
       z: (rand() - 0.5) * 0.1 + 0.09,
       scale: 0.5 + rand() * 0.5,
+      // Blossoms only arrive in the last two phases — the relationship (and
+      // the wall) blooming together near the end of the story, not present
+      // from the very first meeting.
+      phase: rand() < 0.5 ? 4 : 5,
+      phaseLocalOrder: rand(),
     });
   }
   return blossoms;
+}
+
+type SparkleDatum = { x: number; y: number; z: number; phase: number };
+const SPARKLE_COLORS: THREE.Color[] = [
+  new THREE.Color("#e8879e"),
+  new THREE.Color("#8fd0a8"),
+  new THREE.Color("#e8d17a"),
+  new THREE.Color("#a89be0"),
+];
+function buildSparkles(count: number): SparkleDatum[] {
+  const rand = seededRandom(SEED + count + 41);
+  const sparkles: SparkleDatum[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = rand() * Math.PI * 2;
+    const r = WALL_WIDTH * (0.65 + rand() * 0.8);
+    sparkles.push({
+      x: Math.cos(angle) * r,
+      y: (rand() - 0.5) * WALL_HEIGHT * 1.3,
+      z: Math.sin(angle) * r * 0.5 + 0.1,
+      phase: 1 + Math.floor(rand() * PHASE_COUNT),
+    });
+  }
+  return sparkles;
 }
 
 export default function StoryPlantWall({
@@ -179,15 +246,18 @@ export default function StoryPlantWall({
   const mobileTier = coarsePointer || narrow;
   const leafCount = mobileTier ? 170 : 420;
   const blossomCount = mobileTier ? 8 : 20;
+  const sparkleCount = mobileTier ? 14 : 34;
 
   const leaves = useMemo(() => buildLeaves(leafCount), [leafCount]);
   const blossoms = useMemo(() => buildBlossoms(blossomCount), [blossomCount]);
+  const sparkles = useMemo(() => buildSparkles(sparkleCount), [sparkleCount]);
 
   const camera = useThree((state) => state.camera);
   const groupRef = useRef<THREE.Group>(null);
   const fernRef = useRef<THREE.InstancedMesh>(null);
   const broadRef = useRef<THREE.InstancedMesh>(null);
   const blossomRef = useRef<THREE.InstancedMesh>(null);
+  const sparkleRef = useRef<THREE.InstancedMesh>(null);
   const boxRef = useRef<THREE.Mesh>(null);
   const keyRef = useRef<THREE.PointLight>(null);
   const rimRef = useRef<THREE.PointLight>(null);
@@ -199,6 +269,7 @@ export default function StoryPlantWall({
   const fernGeo = useMemo(() => buildLeafGeometry(buildFernShape(), 0.05), []);
   const broadGeo = useMemo(() => buildLeafGeometry(buildBroadShape(), 0.07), []);
   const blossomGeo = useMemo(() => new THREE.SphereGeometry(0.028, 6, 5), []);
+  const sparkleGeo = useMemo(() => new THREE.SphereGeometry(0.012, 5, 4), []);
   const boxGeo = useMemo(
     () => new THREE.BoxGeometry(WALL_WIDTH * 1.08, BOX_HEIGHT, 0.24),
     []
@@ -212,15 +283,17 @@ export default function StoryPlantWall({
       fernGeo.dispose();
       broadGeo.dispose();
       blossomGeo.dispose();
+      sparkleGeo.dispose();
       boxGeo.dispose();
     };
-  }, [fernGeo, broadGeo, blossomGeo, boxGeo]);
+  }, [fernGeo, broadGeo, blossomGeo, sparkleGeo, boxGeo]);
 
   useEffect(() => {
     const fern = fernRef.current;
     const broad = broadRef.current;
     const blossom = blossomRef.current;
-    if (!fern || !broad || !blossom) return;
+    const sparkle = sparkleRef.current;
+    if (!fern || !broad || !blossom || !sparkle) return;
     const color = new THREE.Color();
     let fi = 0;
     let bi = 0;
@@ -233,7 +306,11 @@ export default function StoryPlantWall({
     if (broad.instanceColor) broad.instanceColor.needsUpdate = true;
     for (let i = 0; i < blossoms.length; i++) blossom.setColorAt(i, BLOSSOM_COLOR);
     if (blossom.instanceColor) blossom.instanceColor.needsUpdate = true;
-  }, [leaves, blossoms]);
+    for (let i = 0; i < sparkles.length; i++) {
+      sparkle.setColorAt(i, SPARKLE_COLORS[i % SPARKLE_COLORS.length]);
+    }
+    if (sparkle.instanceColor) sparkle.instanceColor.needsUpdate = true;
+  }, [leaves, blossoms, sparkles]);
 
   const matrix = useMemo(() => new THREE.Matrix4(), []);
   const position = useMemo(() => new THREE.Vector3(), []);
@@ -244,38 +321,16 @@ export default function StoryPlantWall({
   const anchor = useMemo(() => new THREE.Vector3(), []);
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
-  useEffect(() => {
-    const fern = fernRef.current;
-    const broad = broadRef.current;
-    if (!fern || !broad) return;
-    let fi = 0;
-    let bi = 0;
-    for (const leaf of leaves) {
-      position.set(leaf.x, leaf.y, leaf.z);
-      euler.set(leaf.tiltX, leaf.rotY, leaf.tiltZ);
-      quaternion.setFromEuler(euler);
-      scaleVec.setScalar(leaf.scale * (leaf.kind === 0 ? 1.4 : 1));
-      matrix.compose(position, quaternion, scaleVec);
-      if (leaf.kind === 0) fern.setMatrixAt(fi++, matrix);
-      else broad.setMatrixAt(bi++, matrix);
-    }
-    fern.instanceMatrix.needsUpdate = true;
-    broad.instanceMatrix.needsUpdate = true;
-
-    const blossom = blossomRef.current;
-    if (blossom) {
-      let idx = 0;
-      for (const b of blossoms) {
-        position.set(b.x, b.y, b.z);
-        quaternion.identity();
-        scaleVec.setScalar(b.scale);
-        matrix.compose(position, quaternion, scaleVec);
-        blossom.setMatrixAt(idx++, matrix);
-      }
-      blossom.instanceMatrix.needsUpdate = true;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaves, blossoms]);
+  // How grown a single instance is, 0-1, purely a function of scroll
+  // position: 0 until chapterProgress reaches this instance's phase band,
+  // then a short smoothstep pop to full size, staggered within the band by
+  // `phaseLocalOrder` so an entire phase doesn't scale in as one flat unit.
+  const growthAt = (chapterProgress: number, phase: number, localOrder: number) => {
+    const bandWidth = 1 / PHASE_COUNT;
+    const phaseStart = (phase - 1) * bandWidth;
+    const revealAt = phaseStart + localOrder * bandWidth * 0.6;
+    return THREE.MathUtils.smoothstep(chapterProgress, revealAt, revealAt + 0.045);
+  };
 
   useFrame((_state, delta) => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -283,8 +338,9 @@ export default function StoryPlantWall({
     const fern = fernRef.current;
     const broad = broadRef.current;
     const blossom = blossomRef.current;
+    const sparkle = sparkleRef.current;
     const box = boxRef.current;
-    if (!group || !fern || !broad || !blossom || !box) return;
+    if (!group || !fern || !broad || !blossom || !sparkle || !box) return;
     const dt = Math.min(delta, 0.1);
 
     const progress = progressRef.current;
@@ -328,9 +384,52 @@ export default function StoryPlantWall({
       rimRef.current.intensity = 1.4 * presence;
     }
 
+    // Grow each phase's leaves in as chapterProgress reaches its band —
+    // this is what makes "5 phases combined" a real, continuous scroll
+    // animation rather than 5 static snapshots.
+    const cp = progress.chapterProgress;
+    let fi = 0;
+    let bi = 0;
+    for (const leaf of leaves) {
+      const growth = growthAt(cp, leaf.phase, leaf.phaseLocalOrder);
+      position.set(leaf.x, leaf.y, leaf.z);
+      euler.set(leaf.tiltX, leaf.rotY, leaf.tiltZ);
+      quaternion.setFromEuler(euler);
+      scaleVec.setScalar(leaf.scale * (leaf.kind === 0 ? 1.4 : 1) * growth);
+      matrix.compose(position, quaternion, scaleVec);
+      if (leaf.kind === 0) fern.setMatrixAt(fi++, matrix);
+      else broad.setMatrixAt(bi++, matrix);
+    }
+    fern.instanceMatrix.needsUpdate = true;
+    broad.instanceMatrix.needsUpdate = true;
+
+    let blossomIdx = 0;
+    for (const b of blossoms) {
+      const growth = growthAt(cp, b.phase, b.phaseLocalOrder);
+      position.set(b.x, b.y, b.z);
+      quaternion.identity();
+      scaleVec.setScalar(b.scale * growth);
+      matrix.compose(position, quaternion, scaleVec);
+      blossom.setMatrixAt(blossomIdx++, matrix);
+    }
+    blossom.instanceMatrix.needsUpdate = true;
+
+    let sparkleIdx = 0;
+    for (const s of sparkles) {
+      const growth = growthAt(cp, s.phase, 0);
+      const twinkle = 0.6 + 0.4 * Math.sin(timeRef.current * 1.6 + sparkleIdx * 2.1);
+      position.set(s.x, s.y, s.z);
+      quaternion.identity();
+      scaleVec.setScalar(growth * twinkle);
+      matrix.compose(position, quaternion, scaleVec);
+      sparkle.setMatrixAt(sparkleIdx++, matrix);
+    }
+    sparkle.instanceMatrix.needsUpdate = true;
+
     (fern.material as THREE.MeshStandardMaterial).opacity = presence;
     (broad.material as THREE.MeshStandardMaterial).opacity = presence;
     (blossom.material as THREE.MeshStandardMaterial).opacity = presence;
+    (sparkle.material as THREE.MeshBasicMaterial).opacity = presence * 0.85;
     (box.material as THREE.MeshStandardMaterial).opacity = presence;
   });
 
@@ -367,6 +466,20 @@ export default function StoryPlantWall({
       </instancedMesh>
       <instancedMesh ref={blossomRef} args={[blossomGeo, undefined, Math.max(1, blossoms.length)]} frustumCulled={false}>
         <meshStandardMaterial roughness={0.4} metalness={0} transparent opacity={0} />
+      </instancedMesh>
+      {/* Small drifting bloom-lit particles around the wall — the
+          gallery-installation quality noted in this file's own doc
+          comment, reinterpreted from activetheory.net/work rather than
+          copied from it. Unlit + additive so they read as glowing points,
+          not lit geometry. */}
+      <instancedMesh ref={sparkleRef} args={[sparkleGeo, undefined, Math.max(1, sparkles.length)]} frustumCulled={false}>
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
       </instancedMesh>
     </group>
   );
