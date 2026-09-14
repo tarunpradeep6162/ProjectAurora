@@ -18,8 +18,13 @@ import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
 import PhotoDissolve from "./PhotoDissolve";
 import StardustTrail from "./StardustTrail";
-import AuroraRelic from "./AuroraRelic";
+import TulipGarden from "./TulipGarden";
 import MemoryBlocks from "./MemoryBlocks";
+// AuroraRelic.tsx is deliberately kept on disk, unmounted here — the
+// brief that replaced it with the tulip garden also floated it as a
+// possible distant Finale callback later ("Relic appears far away
+// again"), which this pass doesn't attempt. Real, working, verified
+// component; just not part of the Hero anymore.
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -517,7 +522,7 @@ function Universe({
         <CoupleModel progressRef={progressRef} />
         <TarunRunner progressRef={progressRef} />
         <PhotoDissolve progressRef={progressRef} />
-        <AuroraRelic progressRef={progressRef} />
+        <TulipGarden progressRef={progressRef} />
         <MemoryBlocks progressRef={progressRef} />
       </WorldGroup>
       <CameraRig

@@ -10,13 +10,17 @@ import { theatreMemoryBlocks } from "@/theatre/auroraProject";
 import { relicXOffset } from "./AuroraRelic";
 
 /**
- * The floating fragments around the Aurora Relic — not decoration, staged
- * geometry that gives the hero real depth (some behind the Relic, some
- * beside it, some near the camera). Three `InstancedMesh` groups, one per
- * material family (dark glass / champagne / rose), each reusing one shared
- * `RoundedBoxGeometry` — a real bevel, not a plain `BoxGeometry`, per the
- * brief. Deterministic seeded layout (`seededRandom` below), never
- * `Math.random()` — the same block occupies the same place on every visit.
+ * Secondary story objects for the hero — originally staged around the
+ * Aurora Relic; kept (subtler, fewer, biased deeper into the scene) after
+ * the tulip garden replaced the Relic as the hero's primary visual, per
+ * the brief's own instruction not to drop the block concept entirely, just
+ * demote it. Three `InstancedMesh` groups, one per material family (dark
+ * glass / champagne / rose), each reusing one shared `RoundedBoxGeometry`
+ * — a real bevel, not a plain `BoxGeometry`. Deterministic seeded layout
+ * (`seededRandom` below), never `Math.random()` — the same block occupies
+ * the same place on every visit. `relicXOffset` (still imported from
+ * `AuroraRelic.tsx`, which remains on disk unmounted) is reused verbatim
+ * for its x-positioning logic rather than duplicated.
  *
  * Not implemented this pass: true per-instance opacity (would need a
  * custom shader or vertex-color channel; each material group instead fades
@@ -75,10 +79,11 @@ function buildBlocks(count: number): BlockDatum[] {
     const roll = rand();
     const group: MaterialGroup = roll < 0.62 ? "dark" : roll < 0.88 ? "champagne" : "rose";
 
-    // Depth band: near / mid / far relative to the camera (portal camera
-    // sits at world z=9 looking toward -z — larger z is closer to camera).
+    // Depth band, biased toward "far" now — "a few dark glass memory
+    // monoliths deeper among the flowers", not sharing the tulip garden's
+    // own near-camera foreground.
     const bandRoll = rand();
-    const depthFactor = bandRoll < 0.3 ? 0.85 + rand() * 0.15 : bandRoll < 0.7 ? 0.35 + rand() * 0.3 : rand() * 0.25;
+    const depthFactor = bandRoll < 0.15 ? 0.7 + rand() * 0.15 : bandRoll < 0.45 ? 0.3 + rand() * 0.25 : rand() * 0.25;
     const z = RELIC_CENTER.z - 2.6 + depthFactor * 3.6 + (rand() - 0.5) * 0.4;
 
     const angle = rand() * Math.PI * 2;
@@ -107,9 +112,11 @@ const MATERIAL_CONFIG: Record<
   MaterialGroup,
   { color: string; roughness: number; metalness: number; opacity: number }
 > = {
-  dark: { color: "#0c0c10", roughness: 0.22, metalness: 0.35, opacity: 0.92 },
-  champagne: { color: "#d9b98a", roughness: 0.3, metalness: 0.1, opacity: 0.55 },
-  rose: { color: "#8a6270", roughness: 0.32, metalness: 0.12, opacity: 0.5 },
+  // Opacity lowered from the Relic era for the same "very subtle" reason
+  // as the count above.
+  dark: { color: "#0c0c10", roughness: 0.22, metalness: 0.35, opacity: 0.62 },
+  champagne: { color: "#d9b98a", roughness: 0.3, metalness: 0.1, opacity: 0.38 },
+  rose: { color: "#8a6270", roughness: 0.32, metalness: 0.12, opacity: 0.34 },
 };
 
 /** Presence across the portal chapter — later and subtler than the Relic's own reveal ("blocks remain mostly hidden" until late in the hero beat sequence), and never fully opaque even at peak. */
@@ -305,7 +312,10 @@ export default function MemoryBlocks({
   const coarsePointer = useCoarsePointer();
   const narrow = useNarrowViewport();
   const mobileTier = coarsePointer || narrow;
-  const count = mobileTier ? 10 : 19;
+  // Reduced from the Relic-era count: the brief that replaced the Relic
+  // with the tulip garden wants these "very subtle... deeper among the
+  // flowers" now, secondary story objects rather than a competing field.
+  const count = mobileTier ? 4 : 8;
 
   return <BlockField progressRef={progressRef} count={count} mobileTier={mobileTier} />;
 }

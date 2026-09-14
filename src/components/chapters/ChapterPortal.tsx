@@ -276,12 +276,15 @@ export default function ChapterPortal() {
           </span>
         </h1>
 
-        <p data-o="sub" className="type-meta opening-sub">
-          {site.subtitle}
+        <p data-o="sub" className="type-emotion opening-sub">
+          A universe made from the moments I never wanted to lose.
         </p>
-        <p data-o="msg" className="type-emotion opening-msg">
-          A portal opens into a world made from love, light and memory.
-        </p>
+        {/* `msg` stays in the DOM (empty) rather than being removed outright
+            — ChapterPortal's own GSAP entrance timeline below still
+            references `els.msg` by query, and an element that silently
+            disappears from a carefully-staggered sequence is a smaller risk
+            than restructuring that timeline's offsets in the same pass. */}
+        <p data-o="msg" className="sr-only" aria-hidden="true" />
 
         <div data-o="cta" className="opening-cta">
           <button
@@ -290,7 +293,7 @@ export default function ChapterPortal() {
             className="btn-cinema"
             data-cursor="enter"
           >
-            Begin the Journey
+            Enter Our Universe
           </button>
           <span className="type-meta opening-hint" aria-hidden="true">
             or scroll
@@ -303,7 +306,10 @@ export default function ChapterPortal() {
         </div>
       </div>
 
-      <p data-o="slate" className="type-meta opening-slate">
+      {/* The chapter slate is wayfinding, not a headline — visually gone,
+          kept for anyone tracking position via assistive tech alongside the
+          live region ChapterNav already announces. */}
+      <p data-o="slate" className="sr-only">
         Chapter 01 <span aria-hidden="true">·</span> Enter the universe
       </p>
 

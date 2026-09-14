@@ -44,13 +44,6 @@ export default function ChapterFinale() {
       ?.scrollIntoView({ behavior: reduced ? "instant" : "smooth" });
   }
 
-  const actions = [
-    { label: "Replay the Journey", target: "portal" },
-    { label: "Revisit the Memories", target: "memories" },
-    { label: "Read the Letter Again", target: "letter" },
-    { label: "Back to the Celebration", target: "birthday" },
-  ];
-
   return (
     <section
       ref={root}
@@ -83,45 +76,35 @@ export default function ChapterFinale() {
       <div aria-hidden="true" className="finale-depth" />
 
       <div className="finale-inner">
-        <p className="type-meta" data-reveal="fade">
-          Chapter 08
-        </p>
-        <h2 id="finale-title" className="type-chapter mt-6" data-reveal="mask">
-          <span className="reveal-line">And this is only the beginning</span>
+        {/* "And this is only the beginning" and its subtitle stay for
+            screen readers/document structure; visually this chapter now
+            opens directly on silence, then the one line that matters. */}
+        <h2 id="finale-title" className="sr-only">
+          And this is only the beginning
         </h2>
-        <p className="type-emotion mx-auto mt-7 max-w-[28rem]" data-reveal="fade">
+        <p className="sr-only">
           The universe grows quiet, but our story continues beyond the final
           star.
         </p>
-
-        <div className="finale-lines">
-          <p className="type-emotion" data-reveal="fade">
-            This whole universe is made out of ordinary days with you.
-          </p>
-          <p className="type-emotion mt-4" data-reveal="fade">
-            The best ones have not happened yet.
-          </p>
-        </div>
+        <p className="sr-only" data-reveal="fade">
+          This whole universe is made out of ordinary days with you. The best
+          ones have not happened yet.
+        </p>
 
         <p className="type-chapter finale-birthday" data-reveal="mask">
           <span className="reveal-line">Happy Birthday, my love.</span>
         </p>
 
         <nav aria-label="Revisit the story" className="finale-actions" data-reveal="fade">
-          {actions.map((action) => (
-            <button
-              key={action.target}
-              type="button"
-              onClick={() => scrollTo(action.target)}
-              className="btn-quiet"
-            >
-              {action.label}
-            </button>
-          ))}
+          <button type="button" onClick={() => scrollTo("portal")} className="btn-quiet">
+            Replay our story
+          </button>
         </nav>
 
         <footer className="finale-dedication" data-reveal="fade">
-          <p className="type-meta">{site.footer}</p>
+          <p className="type-meta">Created with love by {site.author}</p>
+          <p className="type-meta mt-1">For {site.recipient}</p>
+          <p className="type-meta mt-1">{site.birthday}</p>
         </footer>
       </div>
     </section>

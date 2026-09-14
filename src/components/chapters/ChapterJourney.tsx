@@ -248,14 +248,17 @@ export default function ChapterJourney() {
         })}
       </div>
 
+      {/* Tarun running is this chapter's whole statement — the DOM stays
+          almost silent here on purpose (the heading and its genuine
+          subtitle remain for screen readers/document structure). */}
       <div ref={copyRef} className="relative z-10 mx-auto w-full max-w-2xl text-center">
-        <p className="type-meta" data-reveal="fade">
-          Chapter 04
-        </p>
-        <h2 id="journey-title" className="type-chapter mt-5" data-reveal="mask">
-          <span className="reveal-line">The journey between us</span>
+        <h2 id="journey-title" className="sr-only">
+          The journey between us
         </h2>
-        <p className="type-emotion mx-auto mt-6 max-w-lg" data-reveal="fade">
+        <p className="type-meta" data-reveal="fade">
+          The journey
+        </p>
+        <p className="sr-only">
           Not a straight line, but a glowing path of memories, growth and
           choosing each other.
         </p>

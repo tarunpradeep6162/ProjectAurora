@@ -88,17 +88,22 @@ export default function ChapterMiracle() {
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         <p className="type-meta" data-reveal="fade">
-          Chapter 02
+          The beginning
         </p>
+        {/* One line, not a heading-plus-subtitle pair — and the line that
+            actually sounds like Tarun speaking, not the site describing
+            itself. The subtitle's own wording ("a cinematic beginning...")
+            is exactly the site-describing-itself phrasing this pass is
+            removing, so it moves to sr-only instead of the heading. */}
         <h2
           id="miracle-title"
           tabIndex={-1}
-          className="type-chapter mt-6"
-          data-reveal="mask"
+          className="type-emotion mx-auto mt-6 max-w-xl"
+          data-reveal="fade"
         >
-          <span className="reveal-line">You are my favourite miracle</span>
+          You are my favourite miracle
         </h2>
-        <p className="type-emotion mx-auto mt-8 max-w-xl" data-reveal="fade">
+        <p className="sr-only">
           A cinematic beginning for the person who made ordinary days feel
           extraordinary.
         </p>
