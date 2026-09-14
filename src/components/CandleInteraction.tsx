@@ -325,8 +325,17 @@ export default function CandleInteraction() {
           ) : (
             phase === "revealed" && (
               <div className="candle-wish candle-card">
-                {birthdayCard.lines.map((line) => (
-                  <p key={line} className="type-emotion">
+                {birthdayCard.lines.map((line, index) => (
+                  <p
+                    key={line}
+                    className={
+                      index === 0
+                        ? "type-meta"
+                        : index === 1
+                          ? "type-chapter"
+                          : "type-emotion"
+                    }
+                  >
                     {line}
                   </p>
                 ))}

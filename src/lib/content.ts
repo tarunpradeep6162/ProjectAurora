@@ -190,11 +190,15 @@ export const birthdayCard = {
   /** The name on the cake's gold plaque. */
   name: "Dheepika",
   lines: [
+    "Happy Birthday",
+    "Dheepika",
     "May this year be as kind to you as you are to everyone else",
     "And may I be there for all of it",
   ],
   wishPrompt: "Make a wish",
   wishAction: "Blow out the candles",
+  /** The label the trigger carries once the wish has been made. */
+  wishDone: "Happy birthday, Dheepika",
 };
 
 export type HiddenMessage = {
