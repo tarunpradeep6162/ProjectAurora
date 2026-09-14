@@ -100,42 +100,61 @@ type FlowerDatum = {
 };
 
 /**
- * A single tulip petal: a lune (a narrow wedge) cut from a unit sphere,
- * spanning from the pole (which becomes the petal's rounded tip) down to
- * a chosen latitude (the petal's open base). A sphere's own curvature
- * gives the petal a natural cupped, slightly bowl-shaped surface for free
- * — no custom vertex displacement needed. The geometry is then translated
- * so its local origin sits at the *base* ring's centre rather than the
- * sphere's true centre, so instancing it with `position = flower tip` and
- * `rotation = outward tilt` places the base at the flower and the tip
- * pointing away from it, exactly like a real petal's attachment.
+ * A single tulip petal. Rebuilt after checking real closed-tulip reference
+ * photos (Google Images) against the previous geometry: a real petal is
+ * narrow where it attaches at the base, bulges out to its widest around
+ * the middle, then rounds off to a **blunt**, not pointed, tip — and on a
+ * closed tulip the whole flower reads as one smooth, plump, rounded-oval
+ * bud, not a spray of pointed blades.
+ *
+ * The earlier version cut a lune from a sphere (pole-to-equator): that
+ * shape is wide at the base and tapers *linearly to an actual point* at
+ * the tip — backwards from real anatomy, and the sharp point is exactly
+ * what made the flower read as an open flame/lily shape rather than a
+ * closed cup no matter how the tilt was tuned. This version is a 2D
+ * profile (`THREE.Shape`, narrow-base → wide-belly → rounded-tip, mirrored
+ * left/right) extruded flat then bent slightly concave across its width —
+ * the same "flat ShapeGeometry needs out-of-plane displacement or it
+ * looks fake" lesson already learned from the leaves (`buildLeafGeometry`)
+ * — so it reads as a soft cupped surface, not a sheet of paper.
  *
  * A vertex-colour gradient is baked in at the same time — shaded/recessed
  * near the base, full brightness at the tip — multiplied against each
  * instance's own colour at render time (`vertexColors` + `instanceColor`
  * both apply on `MeshPhysicalMaterial` without conflicting).
  */
+function buildPetalShape(): THREE.Shape {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(0.3, 0.12, 0.38, 0.4);
+  shape.quadraticCurveTo(0.32, 0.78, 0.13, 0.93);
+  shape.quadraticCurveTo(0.05, 0.99, 0, 1);
+  shape.quadraticCurveTo(-0.05, 0.99, -0.13, 0.93);
+  shape.quadraticCurveTo(-0.32, 0.78, -0.38, 0.4);
+  shape.quadraticCurveTo(-0.3, 0.12, 0, 0);
+  return shape;
+}
+
 function buildPetalGeometry(): THREE.BufferGeometry {
-  const radius = 1;
-  const thetaLength = Math.PI * 0.5; // pole to equator: half the sphere's height
-  const geo = new THREE.SphereGeometry(
-    radius,
-    8,
-    7,
-    -Math.PI * 0.2,
-    Math.PI * 0.4, // phiLength: wide enough for a rounded petal cross-section, not a full band around the sphere
-    0,
-    thetaLength
-  );
-
-  const baseY = radius * Math.cos(thetaLength); // 0 here (thetaLength = π/2), kept general
-  geo.translate(0, -baseY, 0);
-
+  const geo = new THREE.ShapeGeometry(buildPetalShape(), 10);
   const pos = geo.attributes.position;
-  const tipY = radius - baseY;
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = THREE.MathUtils.clamp(pos.getY(i), 0, 1);
+    // Concave across the width (both edges curl slightly toward the
+    // flower's own centre axis), stronger near the tip than the base —
+    // a closed tulip's petals cup inward to enclose the bud, they don't
+    // stay flat or curl outward/backward the way an open flower's do.
+    const channel = 0.24 * x * x * (0.35 + 0.65 * y);
+    pos.setZ(i, channel);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+
   const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    const t = THREE.MathUtils.clamp(pos.getY(i) / Math.max(1e-6, tipY), 0, 1);
+    const t = THREE.MathUtils.clamp(pos.getY(i), 0, 1);
     const shade = THREE.MathUtils.lerp(0.55, 1.0, t);
     colors[i * 3] = shade;
     colors[i * 3 + 1] = shade;
@@ -425,17 +444,12 @@ function GardenMeshes({
       euler.set(stemLean * 0.6, f.bulbRotationY + windSway * 0.5, windLean);
       flowerQuat.setFromEuler(euler);
 
-      // Widened from an earlier pass's 0.14 — at that ratio (length ~2.4x
-      // width) petals read as thin blade shards, not rounded petals,
-      // confirmed live. Real tulip petals run closer to 1.3-1.6x longer
-      // than wide.
-      const petalLength = f.scale * (0.34 + f.depthFactor * 0.05);
-      // Narrowed from 0.21 — with the tilt now much tighter (petals
-      // standing closer to upright, cup-shaped rather than splayed open)
-      // the earlier width read as bulky/blobby instead of the slender,
-      // elongated petal shape a real tulip has.
-      const petalWidth = f.scale * 0.165;
-      const petalThickness = f.scale * 0.1;
+      // buildPetalShape()'s own local profile is already ~0.76 wide by 1.0
+      // tall (narrow base, bulging belly, rounded tip) — these are overall
+      // scale multipliers on that baked shape, not raw dimensions.
+      const petalLength = f.scale * (0.36 + f.depthFactor * 0.05);
+      const petalWidth = f.scale * 0.34;
+      const petalThickness = f.scale * 0.14;
 
       for (let j = 0; j < PETALS_PER_FLOWER; j++) {
         // Deterministic per-petal variation from the flower's own seed and
@@ -446,13 +460,14 @@ function GardenMeshes({
         // Alternating outer/inner tilt is what makes six evenly-spaced
         // petals actually read as layered and overlapping rather than a
         // single flat ring — the same "3 outer + 3 inner" structure a real
-        // tulip has. Tilt angles pulled way in from an earlier pass's
-        // 0.6/0.42 (34/24 degrees from vertical) — that splayed the petals
-        // open into a flame/lily silhouette; a real tulip is a tight,
-        // mostly-closed cup with petals running close to parallel to the
-        // stem, confirmed against a reference photo.
+        // tulip has. Tilted in twice now: first from 0.6/0.42 to 0.24/0.13,
+        // then — after checking real closed-tulip photos and finding the
+        // flower still read as slightly open — down to near-vertical. A
+        // genuinely closed tulip's petals run almost parallel to the stem;
+        // any real "opening" angle in reference photos is only a few
+        // degrees.
         const outer = j % 2 === 0;
-        const tilt = (outer ? 0.24 : 0.13) + Math.cos(petalSeed * 1.3) * 0.03;
+        const tilt = (outer ? 0.13 : 0.06) + Math.cos(petalSeed * 1.3) * 0.02;
         const petalScaleJ = 0.92 + Math.sin(petalSeed * 2.1) * 0.08;
 
         ringQuat.setFromAxisAngle(Y_AXIS, ringAngle);
