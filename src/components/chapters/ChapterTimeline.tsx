@@ -8,6 +8,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 import { useMotionEngineAlive } from "@/components/chapters/useMotionEngine";
+import { requestSceneRemeasure } from "@/components/cosmic/sceneProgress";
 
 // Coordinates within a 0-100 x, 0-40 y viewBox — a slim horizontal strip so
 // the constellation reads as a quiet underline to the timeline, not a
@@ -129,6 +130,16 @@ export default function ChapterTimeline() {
       // The layout above this chapter just changed from list to stage;
       // every later trigger's start/end must be measured against that.
       ScrollTrigger.refresh();
+      // GSAP's own refresh above only recalculates *GSAP's* triggers.
+      // sceneProgress.ts keeps its own, independent bounds cache (chapter
+      // index, camera arc position, everything staged off "journey" being
+      // active) and was never told this 500vh pin-spacer just appeared —
+      // discovered by scrolling normally and finding the chapter indicator
+      // two whole chapters ahead of what was actually on screen, the same
+      // stale-bounds failure mode already fixed once for the candle/wish
+      // sequence. Same fix here: a frame late so the pin-spacer's own final
+      // height has definitely committed before it's measured.
+      requestAnimationFrame(requestSceneRemeasure);
 
       return () => st.kill();
     },
