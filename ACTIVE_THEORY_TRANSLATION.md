@@ -109,8 +109,10 @@ dropped): the "Enter Our Universe" camera-through-blocks entry sequence,
 block→photo transitions, Journey/Couple/Birthday/Finale reuse of the same
 blocks, and dedicated `RELIC_REVEAL`/`BLOCK_ASSEMBLY`/etc. Theatre
 sequence ranges (the existing single master-clock mapping is unchanged).
-See `AURORA_V3_ARCHITECTURE.md` for the confirmed, real, unresolved
-mobile-visibility issue found while testing this system.
+A false "invisible on mobile" alarm was raised and then retracted while
+testing this system — see `AURORA_V3_ARCHITECTURE.md` for the actual
+cause (a testing-tool artifact, not a product bug) and the lesson for
+future verification.
 
 ## What's still owed from the brief's fuller Journey-world spec
 

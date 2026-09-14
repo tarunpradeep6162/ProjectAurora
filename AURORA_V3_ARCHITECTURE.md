@@ -16,22 +16,29 @@ screenshots on desktop across multiple sizing/positioning iterations, and
 confirmed registered as real Theatre objects (`AuroraRelic`, `RelicKey`,
 `RelicRim`, `MemoryBlocks`) in Studio's own Outline panel.
 
-**Known, real, unresolved issue**: both are confirmed *absent* — not just
-small — on a 375×812 mobile viewport, checked at several scroll positions
-inside the portal chapter with Theatre's own UI hidden out of the way for
-a clean view. Two different fixes were attempted (a continuous
-aspect-ratio-based x-offset, then a simpler device-tier boolean matching
-the pattern `MemoryBlocks.tsx` already used successfully for its own
-particle count) — neither made the Relic reappear on mobile. A
-console/`window`-counter-based debugging attempt to find the root cause
-produced results (a `useFrame` callback apparently never firing) that
-directly contradicted the visual evidence on desktop, where the same
-component was clearly rendering and updating — meaning that specific
-debugging technique is unreliable in this environment and its results
-were discarded rather than trusted. The desktop implementation is real
-and unaffected; the mobile absence is a genuine, reproducible, but
-currently unexplained gap. Not silently shipped as "mobile-ready" — this
-is the honest state.
+**Correction to an earlier version of this document**: a prior pass
+reported the Relic/blocks as confirmed absent on a 375×812 mobile
+viewport and treated it as a real, unresolved product bug. That was
+wrong, and the mistake is worth recording rather than quietly fixing,
+since the same false alarm could recur. The actual cause: every
+presence-gated object in this file (Relic, blocks, Tarun, the couple)
+correctly skips its own `useFrame` work when `document.hidden` is true —
+a deliberate, sensible battery-saving guard, not a bug. The browser
+automation tooling used to test this project backgrounds its preview tab
+after enough interleaved non-browser tool calls, which flips
+`document.hidden` to `true` *for that tab* — a testing-environment
+artifact with no relationship to a real visitor's phone. Debugging that
+chased "why is `useFrame` never firing" concluded the code was broken;
+re-testing with a freshly-opened preview tab and screenshots only
+(`computer` actions, no interleaved script-evaluation calls in between)
+showed the Relic rendering correctly on the same 375×812 viewport,
+correctly sized and framed. The device-tier-aware x-offset and scale
+reduction added while chasing the phantom bug are harmless, reasonable
+mobile-framing choices and were kept; the "known bug" claim itself was
+retracted. Lesson for future testing in this project: prefer `computer`
+actions (screenshot/wait/scroll) for verification, and treat a
+`javascript_tool` call's `document.hidden` reading as unreliable evidence
+of what a real visitor would see.
 
 ## What V3 actually is, right now
 
