@@ -2237,26 +2237,11 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
-/* Chapter 02's own dense, vivid nebula — matched to a specific reference
-   photo (saturated teal/cyan and magenta clouds on near-black) rather than
-   the shared persistent galaxy shader every other chapter also sits in
-   front of, which is deliberately much lower-contrast (see Nebula.tsx).
-   Pure CSS, no image asset: a dark base plus three screen-blended radial
-   gradients (cloud colour) and one normal-blended radial gradient (vignette,
-   keeps the frame's edges dark the way the reference does). Sits behind
-   `.miracle-glow` and the text, in front of the persistent WebGL sky. */
-.miracle-nebula {
-  background-color: #05060f;
-  background-image:
-    radial-gradient(ellipse 62% 60% at 24% 38%, rgba(27, 224, 206, 0.62) 0%, rgba(27, 224, 206, 0) 68%),
-    radial-gradient(ellipse 56% 58% at 72% 34%, rgba(230, 48, 158, 0.55) 0%, rgba(230, 48, 158, 0) 70%),
-    radial-gradient(ellipse 58% 55% at 52% 64%, rgba(140, 64, 214, 0.4) 0%, rgba(140, 64, 214, 0) 72%),
-    radial-gradient(ellipse 100% 92% at 50% 46%, transparent 28%, rgba(2, 3, 9, 0.88) 86%);
-  background-blend-mode: screen, screen, screen, normal;
-  filter: saturate(1.1);
-  opacity: 0.94;
-}
-
+/* Chapter 02's dense nebula is real WebGL now (MiracleNebula.tsx, mounted
+   in the persistent scene) — a CSS gradient version lived here briefly and
+   was replaced after checking it live against a reference photo and
+   finding it flat and starless; a mostly-opaque div can't let the real
+   starfield behind it show through the way genuine noise-driven alpha can. */
 .miracle-glow {
   opacity: 0.2;
   background: radial-gradient(

@@ -13,6 +13,7 @@ import {
 import * as THREE from "three";
 import CosmicMoon from "./Moon";
 import CosmicNebula from "./Nebula";
+import MiracleNebula from "./MiracleNebula";
 import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
@@ -513,6 +514,7 @@ function Universe({
           octaves={quality.nebulaOctaves}
           warp={quality.nebulaWarp}
         />
+        <MiracleNebula progressRef={progressRef} />
         <CosmicMoon progressRef={progressRef} segments={quality.moonSegments} />
         <CosmicMoon
           variant="secondary"

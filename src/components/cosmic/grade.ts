@@ -66,16 +66,14 @@ export type GradeStop = {
 export const GRADE_STOPS: GradeStop[] = [
   // 01 portal — obsidian and violet: the galaxy's edge.
   { base: "#050406", glow: "#1c1428", glowStrength: 0.38, quiet: 0.15, grain: 1 },
-  // 02 miracle — black and warm dusty rose. A real photograph sits behind
-  // the heading for the middle of the chapter.
-  {
-    base: "#0a070a",
-    glow: "#2e1a22",
-    glowStrength: 0.34,
-    quiet: 0.36,
-    grain: 0.55,
-    hold: [0.4, 0.6],
-  },
+  // 02 miracle — used to hold `quiet` high because a real photograph sat
+  // behind the heading for the middle of the chapter and the sky needed to
+  // step back for it. That photograph is gone (see ChapterMiracle.tsx) and
+  // this chapter is now the one place the galaxy itself is the subject
+  // (its own dense nebula, MiracleNebula.tsx) — so the sky no longer steps
+  // back here at all; the old 0.36/hold pairing was silently dimming and
+  // freezing the very starfield this chapter is now supposed to show off.
+  { base: "#0a070a", glow: "#2e1a22", glowStrength: 0.34, quiet: 0.08, grain: 0.55 },
   // 03 story — the timeline and its constellation: deep violet structure.
   { base: "#08070d", glow: "#211a30", glowStrength: 0.32, quiet: 0.1, grain: 0.9 },
   // 04 journey — a touch richer than story: still night-violet, not brighter.

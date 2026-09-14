@@ -7,15 +7,16 @@ import { useInViewReveal } from "@/components/chapters/useInViewReveal";
  * Chapter 2. Held still, over a dense, vivid nebula — no photograph.
  *
  * Used to have a real photograph (`/images/album.jpg`) as this chapter's
- * background, then (previous pass) nothing but the site's shared, very
- * restrained persistent galaxy shader (CosmicBackdrop/CosmicScene — by
- * design low-contrast indigo-black, tuned to stay quiet behind every other
- * chapter too). Checked against a specific reference photo of a saturated
- * cyan/magenta nebula and asked to match it exactly for this chapter only
- * — rather than reworking the shared site-wide shader (which every other
- * chapter also sits in front of, at its own carefully restrained level),
- * `.miracle-nebula` below is a chapter-local, pure-CSS gradient treatment:
- * no photo, no new shader, just this one chapter's own denser sky.
+ * background, then a CSS gradient standing in for a nebula. Checked that
+ * CSS version live against a specific reference photo (saturated
+ * teal/cyan and magenta cloud, real stars scattered through it) and found
+ * it flat and starless — a mostly-opaque gradient div necessarily either
+ * shows nothing behind it or occludes the persistent starfield the same
+ * way the old photo did. Replaced with real WebGL: `MiracleNebula.tsx`,
+ * mounted in the persistent world (CosmicScene.tsx) alongside the site's
+ * shared, deliberately-restrained galaxy shader, fading in only while this
+ * chapter owns the viewport. This section stays fully transparent so that
+ * shows straight through, the same as every other photo-less chapter.
  *
  * "11:11" is real, not decorative — confirmed with Tarun directly rather
  * than assumed, per this project's standing rule to never invent
@@ -43,7 +44,6 @@ export default function ChapterMiracle() {
       aria-labelledby="miracle-title"
       className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-transparent py-32"
     >
-      <div className="miracle-nebula absolute inset-0" aria-hidden="true" />
       <div data-miracle-bg className="miracle-glow absolute inset-0" aria-hidden="true" />
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
