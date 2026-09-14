@@ -332,7 +332,7 @@ function LoadedCoupleModel({
       <pointLight
         ref={keyLightRef}
         position={[1.6, 1.9, 1.4]}
-        color="#ff6ba5"
+        color="#b6738f"
         intensity={0}
         distance={9}
         decay={2}
@@ -341,7 +341,7 @@ function LoadedCoupleModel({
       <pointLight
         ref={fillLightRef}
         position={[-1.8, 1.1, 1.2]}
-        color="#8f7fd8"
+        color="#5c5470"
         intensity={0}
         distance={8}
         decay={2}
@@ -350,7 +350,7 @@ function LoadedCoupleModel({
       <pointLight
         ref={rimLightRef}
         position={[-0.6, 1.7, -2.2]}
-        color="#d8c9f0"
+        color="#b6a4ca"
         intensity={0}
         distance={7}
         decay={2}

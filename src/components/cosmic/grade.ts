@@ -54,59 +54,65 @@ export type GradeStop = {
 
 /**
  * Ordered to match `chapters` in `@/lib/content` exactly. Pink/violet love
- * theme: every stop keeps its original near-black luminance, hold range and
- * quiet/grain pacing — only the hue shifted, from amber-gold to violet and
- * rose, the same "deep sky + a bloom of colour" structure throughout.
+ * theme, restrained: every stop keeps its original near-black luminance,
+ * hold range and quiet/grain pacing — the hue moved from amber-gold to
+ * violet and dusty rose, but at noticeably lower saturation than a first
+ * pass at this theme used, so colour still reads as light emerging from
+ * darkness rather than a coloured wash sitting over it. `glowStrength` is
+ * trimmed too, chapter by chapter, for the same reason. Only the finale
+ * is allowed to warm toward actual champagne — everywhere else stays
+ * closer to charcoal-plum than to pink.
  */
 export const GRADE_STOPS: GradeStop[] = [
-  // 01 portal — opening black, sparse stars: the galaxy's edge.
-  { base: "#06050b", glow: "#2a1a42", glowStrength: 0.5, quiet: 0.15, grain: 1 },
-  // 02 miracle — early memories, warm rose-black. A real photograph sits
-  // behind the heading for the middle of the chapter.
+  // 01 portal — obsidian and violet: the galaxy's edge.
+  { base: "#050406", glow: "#1c1428", glowStrength: 0.38, quiet: 0.15, grain: 1 },
+  // 02 miracle — black and warm dusty rose. A real photograph sits behind
+  // the heading for the middle of the chapter.
   {
-    base: "#0d0712",
-    glow: "#4a1f3a",
-    glowStrength: 0.46,
+    base: "#0a070a",
+    glow: "#2e1a22",
+    glowStrength: 0.34,
     quiet: 0.36,
     grain: 0.55,
     hold: [0.4, 0.6],
   },
-  // 03 story — the timeline and its constellation: more celestial structure.
-  { base: "#0a0814", glow: "#2f2050", glowStrength: 0.44, quiet: 0.1, grain: 0.9 },
-  // 04 journey — night violet, the deepest "travelling" colour.
-  { base: "#08060f", glow: "#241a40", glowStrength: 0.5, quiet: 0.18, grain: 0.85 },
+  // 03 story — the timeline and its constellation: deep violet structure.
+  { base: "#08070d", glow: "#211a30", glowStrength: 0.32, quiet: 0.1, grain: 0.9 },
+  // 04 journey — a touch richer than story: still night-violet, not brighter.
+  { base: "#07060c", glow: "#241d34", glowStrength: 0.36, quiet: 0.18, grain: 0.85 },
   // 05 memories — deliberately neutral and quiet: full-frame photographs are
   // the subject for almost the whole pinned chapter, so the sky steps back
   // across that whole stretch rather than peaking at one point in it.
   {
-    base: "#0a0710",
-    glow: "#2c1a28",
-    glowStrength: 0.26,
+    base: "#0a0709",
+    glow: "#241a1e",
+    glowStrength: 0.22,
     quiet: 0.6,
     grain: 0.3,
     hold: [0.15, 0.85],
   },
-  // 06 letter — calmer, warmer black; the universe turning inward while a
-  // body of text is being read.
+  // 06 letter — warm charcoal and an extremely muted plum; the universe
+  // turning inward while a body of text is being read.
   {
-    base: "#0e0812",
-    glow: "#4a1f42",
-    glowStrength: 0.5,
+    base: "#0c0a0b",
+    glow: "#2a1c24",
+    glowStrength: 0.32,
     quiet: 0.66,
     grain: 0.75,
     hold: [0.3, 0.7],
   },
-  // 07 birthday — near-total darkness, so one flame can carry the frame.
+  // 07 birthday — almost total black, so one flame can carry the frame.
   {
-    base: "#050308",
-    glow: "#2a0f22",
-    glowStrength: 0.24,
+    base: "#030203",
+    glow: "#160e14",
+    glowStrength: 0.18,
     quiet: 0.8,
     grain: 0.6,
     hold: [0.35, 0.5],
   },
-  // 08 finale — obsidian and rose-violet; the sky opening back up.
-  { base: "#0a0710", glow: "#7c285c", glowStrength: 0.6, quiet: 0.2, grain: 0.9 },
+  // 08 finale — deep violet-black, champagne and restrained Aurora rose;
+  // the one stop allowed real warmth, and only here.
+  { base: "#08060a", glow: "#5c4030", glowStrength: 0.46, quiet: 0.2, grain: 0.9 },
 ];
 
 export type Grade = {
