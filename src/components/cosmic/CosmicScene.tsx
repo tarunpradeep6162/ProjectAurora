@@ -8,6 +8,7 @@ import CosmicNebula from "./Nebula";
 import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
+import PhotoDissolve from "./PhotoDissolve";
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -468,6 +469,7 @@ function Universe({
       />
       <CoupleModel progressRef={progressRef} />
       <TarunRunner progressRef={progressRef} />
+      <PhotoDissolve progressRef={progressRef} />
       <CameraRig progressRef={progressRef} pointerParallax={pointerParallax} />
       <FrameBudget onOverBudget={onOverBudget} />
     </>

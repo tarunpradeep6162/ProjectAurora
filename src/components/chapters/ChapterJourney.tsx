@@ -9,6 +9,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 import { usePointerParallax } from "@/hooks/usePointerParallax";
 import { focusFor } from "@/components/chapters/photoFraming";
+import { useWebGLActive } from "@/hooks/useWebGLActive";
 import CosmicPath from "@/components/cosmic/CosmicPath";
 
 /**
@@ -63,6 +64,12 @@ export default function ChapterJourney() {
   const root = useRef<HTMLElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  // The real WebGL photo-dissolve (PhotoDissolve.tsx, mounted in the
+  // persistent canvas) takes over the signature shot on capable devices;
+  // this DOM/CSS treatment is its fallback for reduced motion, a low-power
+  // device, or WebGL being unavailable — never rendered at the same time as
+  // the real one.
+  const webglActive = useWebGLActive();
   useInViewReveal(root);
   // The live site's own subtle mouse drift on chapter copy — recovered
   // exact strength/damping (see usePointerParallax.ts). Ghosts deliberately
@@ -167,27 +174,45 @@ export default function ChapterJourney() {
               className={`journey-ghost${isSignature ? " journey-ghost--signature" : ""}`}
               style={{ "--i": i } as React.CSSProperties}
             >
-              <Image
-                src={memory.src}
-                alt=""
-                fill
-                sizes="40vw"
-                className="journey-ghost__img"
-                style={{ objectPosition: focusFor(memory.id) }}
-              />
-              {isSignature && (
-                <div className="journey-embers">
-                  {EMBER_OFFSETS.map(([ex, ey], j) => (
-                    <span
-                      key={j}
-                      data-journey-ember
-                      data-motion-exempt
-                      className="journey-ember"
-                      style={{ "--ex": `${ex}px`, "--ey": `${ey}px` } as React.CSSProperties}
-                    />
-                  ))}
-                </div>
-              )}
+              {/* The signature ghost's own image+embers are the DOM fallback
+                  for PhotoDissolve.tsx's real particle version — suppressed
+                  (not unmounted, so this element's own GSAP timing/index
+                  stays stable either way) once WebGL is confirmed carrying
+                  the shot instead. `position: relative` + full size: the
+                  child Image's `fill` needs *this* to be its positioned
+                  containing block, not just skip through to the
+                  `.journey-ghost` ancestor two levels up (Next.js's own
+                  dev-mode check warns on the immediate parent specifically). */}
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "100%",
+                  ...(isSignature && webglActive ? { display: "none" } : null),
+                }}
+              >
+                <Image
+                  src={memory.src}
+                  alt=""
+                  fill
+                  sizes="40vw"
+                  className="journey-ghost__img"
+                  style={{ objectPosition: focusFor(memory.id) }}
+                />
+                {isSignature && (
+                  <div className="journey-embers">
+                    {EMBER_OFFSETS.map(([ex, ey], j) => (
+                      <span
+                        key={j}
+                        data-journey-ember
+                        data-motion-exempt
+                        className="journey-ember"
+                        style={{ "--ex": `${ex}px`, "--ey": `${ey}px` } as React.CSSProperties}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
