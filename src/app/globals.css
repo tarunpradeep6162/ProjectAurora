@@ -1656,6 +1656,29 @@ html[data-aurora-hush] .hidden-star {
   font-size: clamp(1.75rem, 1.25rem + 1.9vw, 2.6rem);
 }
 
+/* Memory Constellation points: a slow, small, staggered shimmer — discovered
+   starlight, not a diagram. Animates `fill-opacity`, deliberately not
+   `opacity`: GSAP already drives each point's element `opacity` (and
+   `scale`) to signal which moment is currently reached, and a CSS
+   `animation` on the same property would win the cascade and silently
+   erase that signal. `fill-opacity` is an independent, multiplicative
+   channel, so the shimmer layers on top without ever fighting it. */
+.constellation-point {
+  animation: constellation-shimmer 4.4s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+@keyframes constellation-shimmer {
+  0%, 100% { fill-opacity: 0.72; }
+  50% { fill-opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation-point {
+    animation: none;
+  }
+}
+
 /* ======================================================== MEMORIES ====== */
 
 .memory-flow {

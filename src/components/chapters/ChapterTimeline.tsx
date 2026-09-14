@@ -22,6 +22,20 @@ const CONSTELLATION_POINTS: [number, number][] = [
 ];
 
 /**
+ * A quadratic-bezier control point per segment, bowing gently above/below
+ * the straight line between its two points — an orbit drifting through the
+ * five moments rather than a ruled connect-the-dots path. Offsets are
+ * modest (the viewBox is only 40 units tall) and alternate direction so the
+ * whole path reads as one continuous, gently wandering arc.
+ */
+const CONSTELLATION_CONTROLS: [number, number][] = [
+  [15, 10],
+  [38, 28],
+  [62, 10],
+  [85, 22],
+];
+
+/**
  * Chapter 3 — pinned, scroll-driven storytelling sequence. The section pins
  * for five viewport-heights of scroll and crossfades between the five
  * timeline entries, while the "Memory Constellation" underneath gradually
@@ -58,7 +72,7 @@ export default function ChapterTimeline() {
       const entries = gsap.utils.toArray<HTMLElement>("[data-timeline-entry]");
       if (entries.length === 0) return;
 
-      const segments = gsap.utils.toArray<SVGLineElement>(
+      const segments = gsap.utils.toArray<SVGPathElement>(
         "[data-constellation-segment]"
       );
       const points = gsap.utils.toArray<SVGCircleElement>(
@@ -168,23 +182,28 @@ export default function ChapterTimeline() {
 
         {/* Memory Constellation — purely decorative (aria-hidden, exempt from
             the motion safety net); the same five moments are real text
-            above. */}
+            above. An orbit, not a ruled line: each segment is a gentle
+            bezier arc (CONSTELLATION_CONTROLS), so the path drifts the way
+            a real constellation's sightline does rather than connecting
+            dots mechanically. Points carry a slow, staggered twinkle
+            (off under reduced motion) so the whole thing reads as
+            discovered starlight, not an illustrated diagram. */}
         <div className="mx-auto mt-10 w-full max-w-md" aria-hidden="true">
           <svg viewBox="0 0 100 40" className="h-10 w-full overflow-visible">
             {!skipPin &&
               CONSTELLATION_POINTS.slice(0, -1).map(([x1, y1], i) => {
                 const [x2, y2] = CONSTELLATION_POINTS[i + 1];
+                const [cx, cy] = CONSTELLATION_CONTROLS[i];
                 return (
-                  <line
+                  <path
                     key={i}
                     data-constellation-segment
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
+                    d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
+                    fill="none"
                     stroke="var(--accent-soft)"
                     strokeWidth="0.5"
-                    opacity="0.6"
+                    strokeLinecap="round"
+                    opacity="0.55"
                   />
                 );
               })}
@@ -193,13 +212,17 @@ export default function ChapterTimeline() {
                 key={i}
                 data-constellation-point
                 data-motion-exempt
+                className="constellation-point"
                 cx={x}
                 cy={y}
                 r={skipPin ? 1.4 : 1.2}
-                style={{
-                  fill: "var(--accent-soft)",
-                  opacity: skipPin ? 0.85 - i * 0.12 : undefined,
-                }}
+                style={
+                  {
+                    fill: "var(--accent-soft)",
+                    opacity: skipPin ? 0.85 - i * 0.12 : undefined,
+                    "--twinkle-delay": `${i * 0.6}s`,
+                  } as React.CSSProperties
+                }
               />
             ))}
           </svg>
