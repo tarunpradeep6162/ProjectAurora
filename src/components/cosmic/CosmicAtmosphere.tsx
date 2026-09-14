@@ -20,30 +20,26 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
  * read, its transition treatment has already returned to zero. Nothing
  * here can ever sit on top of something the visitor is trying to read.
  */
+// `--seam-constellation` (at the old "journey" boundary) and `--seam-arrival`
+// (at the old "memories" boundary) are gone: chapters 03-05 merged into one
+// "story" chapter (content.ts) whose carousel now carries those transitions
+// internally, card to card, rather than as a hard boundary between DOM
+// sections — the CSS/DOM pieces that read them (ChapterTimeline.tsx's
+// constellation, MemoryGallery.tsx's `.memories-arrival`) are retired the
+// same way. Both are kept on disk, unmounted, should a future pass want
+// them back.
 const SEAMS = [
-  // Chapter 03 (the Memory Constellation) into Chapter 04 (the journey path):
-  // the constellation's remembered points release and travel forward into
-  // the path. Drives CosmicPath's convergence.
-  { varName: "--seam-constellation", at: "journey", range: 0.9 },
-  // Chapter 04 (the journey's dust) into Chapter 05 (the real photographs):
-  // the road's last warmth becomes the light the first photograph arrives
-  // in — the same "road becomes memory" idea CosmicPath already carries at
-  // the 03/04 seam, continued one boundary further, toward the chapter that
-  // actually holds the photographs.
-  { varName: "--seam-arrival", at: "memories", range: 0.8 },
-  // Chapter 05 (photographs) into Chapter 06 (the letter): motion slows,
+  // Merged chapter 03 (story) into chapter 04 (the letter): motion slows,
   // the sky dims, the background warms, and the letter emerges — the
   // external universe becoming an internal one.
   { varName: "--seam-inward", at: "letter", range: 1.0 },
-  // Chapter 06 (the letter) into Chapter 07 (the candles): the signature
+  // Chapter 04 (the letter) into chapter 05 (the candles): the signature
   // settles, the screen darkens almost completely, and a single remaining
   // light is left burning where the flame is about to be.
   { varName: "--seam-lastlight", at: "birthday", range: 0.85 },
 ] as const;
 
 const RESET: Record<string, string> = {
-  "--seam-constellation": "0",
-  "--seam-arrival": "0",
   "--seam-inward": "0",
   "--seam-lastlight": "0",
   "--seam-lastlight-drift": "0",

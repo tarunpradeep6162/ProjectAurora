@@ -74,22 +74,17 @@ export const GRADE_STOPS: GradeStop[] = [
   // back here at all; the old 0.36/hold pairing was silently dimming and
   // freezing the very starfield this chapter is now supposed to show off.
   { base: "#0a070a", glow: "#2e1a22", glowStrength: 0.34, quiet: 0.08, grain: 0.55 },
-  // 03 story — the timeline and its constellation: deep violet structure.
-  { base: "#08070d", glow: "#211a30", glowStrength: 0.32, quiet: 0.1, grain: 0.9 },
-  // 04 journey — a touch richer than story: still night-violet, not brighter.
-  { base: "#07060c", glow: "#241d34", glowStrength: 0.36, quiet: 0.18, grain: 0.85 },
-  // 05 memories — deliberately neutral and quiet: full-frame photographs are
-  // the subject for almost the whole pinned chapter, so the sky steps back
-  // across that whole stretch rather than peaking at one point in it.
-  {
-    base: "#0a0709",
-    glow: "#241a1e",
-    glowStrength: 0.22,
-    quiet: 0.6,
-    grain: 0.3,
-    hold: [0.15, 0.85],
-  },
-  // 06 letter — warm charcoal and an extremely muted plum; the universe
+  // 03 story — was three separate stops (story/journey/memories) before
+  // those three chapters were merged into one, each carried by its own
+  // section of the story-carousel scroll rather than three DOM sections
+  // dimming the sky differently for a pinned photograph. One consolidated
+  // stop: deep violet structure, closer to the old "story"/"journey"
+  // values than "memories"' own quiet:0.6 — the sky no longer needs to
+  // step back hard for a pinned full-bleed photo, since every photo is now
+  // a smaller card inside a continuous WebGL carousel, not the whole
+  // screen.
+  { base: "#08070d", glow: "#231c32", glowStrength: 0.33, quiet: 0.16, grain: 0.85 },
+  // 04 letter — warm charcoal and an extremely muted plum; the universe
   // turning inward while a body of text is being read.
   {
     base: "#0c0a0b",
@@ -99,7 +94,7 @@ export const GRADE_STOPS: GradeStop[] = [
     grain: 0.75,
     hold: [0.3, 0.7],
   },
-  // 07 birthday — almost total black, so one flame can carry the frame.
+  // 05 birthday — almost total black, so one flame can carry the frame.
   {
     base: "#030203",
     glow: "#160e14",
@@ -108,7 +103,7 @@ export const GRADE_STOPS: GradeStop[] = [
     grain: 0.6,
     hold: [0.35, 0.5],
   },
-  // 08 finale — deep violet-black, champagne and restrained Aurora rose;
+  // 06 finale — deep violet-black, champagne and restrained Aurora rose;
   // the one stop allowed real warmth, and only here.
   { base: "#08060a", glow: "#5c4030", glowStrength: 0.46, quiet: 0.2, grain: 0.9 },
 ];

@@ -214,7 +214,11 @@ export default function CosmicMoon({
     u.uGain.value = gainRef.current;
 
     if (variant === "secondary") {
-      if (progressRef && hasReachedChapter(progressRef.current, "journey")) {
+      // "journey" was its own chapter when this latch was written; chapters
+      // 03-05 are one merged "story" chapter now (see content.ts), so this
+      // reads the merged chapter's arrival instead — a chapter earlier than
+      // before, since "story" now begins where the old chapter 03 did.
+      if (progressRef && hasReachedChapter(progressRef.current, "story")) {
         everReachedRef.current = true;
       }
       const goal = everReachedRef.current ? config.opacity : 0;
