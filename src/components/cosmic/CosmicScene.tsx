@@ -7,7 +7,6 @@ import CosmicMoon from "./Moon";
 import CosmicNebula from "./Nebula";
 import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
-import IslandField from "@/components/islands/IslandField";
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -467,10 +466,6 @@ function Universe({
         segments={Math.max(16, Math.round(quality.moonSegments * 0.66))}
       />
       <CoupleModel progressRef={progressRef} />
-      {/* The persistent canvas never mounts under reduced motion (see
-          CosmicBackdrop), so `reduced` here is always false — kept explicit
-          rather than assumed, in case that gating ever changes. */}
-      <IslandField progressRef={progressRef} compact={tier === "low"} reduced={false} />
       <CameraRig progressRef={progressRef} pointerParallax={pointerParallax} />
       <FrameBudget onOverBudget={onOverBudget} />
     </>
