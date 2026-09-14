@@ -7,7 +7,7 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 import { useLowPowerDevice } from "@/hooks/useLowPowerDevice";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 import { useMotionEngineAlive } from "@/components/chapters/useMotionEngine";
-import { subscribeSceneFrame } from "@/components/cosmic/sceneProgress";
+import { subscribeSceneFrame, requestSceneRemeasure } from "@/components/cosmic/sceneProgress";
 import { FLAME_OUT_SECONDS } from "@/components/cake/cakeMotion";
 import { birthdayCard } from "@/lib/content";
 
@@ -132,6 +132,10 @@ export default function CandleInteraction() {
 
     if (reduced) {
       setPhase("revealed");
+      // The wish card only enters the DOM on this transition; every chapter
+      // boundary after it (finale included) needs to be measured against
+      // the taller document that results, not the one from mount.
+      requestAnimationFrame(requestSceneRemeasure);
       return;
     }
 
@@ -151,6 +155,10 @@ export default function CandleInteraction() {
     at(flameOut + DARK_HOLD_MS + STARS_MS + UNIVERSE_MS, () => {
       setPhase("revealed");
       html.removeAttribute("data-aurora-hush");
+      // Same reasoning as the reduced-motion branch above: the wish card's
+      // text just mounted, so every chapter boundary after this point needs
+      // a fresh measurement.
+      requestAnimationFrame(requestSceneRemeasure);
     });
   }
 

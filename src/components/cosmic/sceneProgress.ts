@@ -133,6 +133,21 @@ function remeasure() {
   update();
 }
 
+/**
+ * Force a remeasure from outside this module, for content that changes the
+ * document's height well after mount and the two deferred remeasures in
+ * `acquire()` — e.g. the birthday chapter's wish text, which only exists in
+ * the DOM once the candle sequence reaches its "revealed" phase. Without
+ * this, every chapter boundary below that point (including the finale)
+ * stays measured against the shorter, pre-reveal document for the rest of
+ * the visit, which silently breaks the active-chapter tracking every seam
+ * transition, the nav's finale-recede and the cosmic grading depend on.
+ * A no-op before the first `acquire()`, same as a stray resize would be.
+ */
+export function requestSceneRemeasure(): void {
+  if (refCount > 0) remeasure();
+}
+
 function acquire() {
   refCount += 1;
   if (refCount > 1) return;
