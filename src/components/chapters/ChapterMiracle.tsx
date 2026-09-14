@@ -4,16 +4,22 @@ import { useRef } from "react";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 
 /**
- * Chapter 2. Held still, with nothing in front of the site's own persistent
- * galaxy — a single line of type, no photograph.
+ * Chapter 2. Held still, over a dense, vivid nebula — no photograph.
  *
  * Used to have a real photograph (`/images/album.jpg`) as this chapter's
- * background. Removed on request: the site already renders one continuous
- * WebGL galaxy fixed behind every chapter (`CosmicBackdrop`/`CosmicScene`,
- * z-index -2) — that IS "the pure galaxy 3D model," and a flat photo
- * sitting in front of it here was blocking it rather than living inside it.
- * This chapter now stays fully transparent so that backdrop shows straight
- * through, the same way every photo-less chapter on the site already does.
+ * background, then (previous pass) nothing but the site's shared, very
+ * restrained persistent galaxy shader (CosmicBackdrop/CosmicScene — by
+ * design low-contrast indigo-black, tuned to stay quiet behind every other
+ * chapter too). Checked against a specific reference photo of a saturated
+ * cyan/magenta nebula and asked to match it exactly for this chapter only
+ * — rather than reworking the shared site-wide shader (which every other
+ * chapter also sits in front of, at its own carefully restrained level),
+ * `.miracle-nebula` below is a chapter-local, pure-CSS gradient treatment:
+ * no photo, no new shader, just this one chapter's own denser sky.
+ *
+ * "11:11" is real, not decorative — confirmed with Tarun directly rather
+ * than assumed, per this project's standing rule to never invent
+ * relationship content.
  *
  * The heading used to rise out of its mask on a GSAP ScrollTrigger tween
  * whose start state was a translate — which MotionSafetyNet (opacity only)
@@ -24,10 +30,7 @@ import { useInViewReveal } from "@/components/chapters/useInViewReveal";
  * This is also where "Begin the Journey" lands: ChapterPortal sets
  * `data-emerge="light"` on this section at the brightest point of its warm
  * bloom, then removes it, and `.miracle-glow`'s CSS transition carries that
- * bloom back down to its resting, barely-there state (see globals.css) —
- * the same transition the photograph used to carry, now driven by a plain
- * radial gradient instead of an image, so the galaxy behind it is never
- * occluded even mid-transition.
+ * bloom back down to its resting, barely-there state (see globals.css).
  */
 export default function ChapterMiracle() {
   const root = useRef<HTMLElement>(null);
@@ -40,11 +43,15 @@ export default function ChapterMiracle() {
       aria-labelledby="miracle-title"
       className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-transparent py-32"
     >
+      <div className="miracle-nebula absolute inset-0" aria-hidden="true" />
       <div data-miracle-bg className="miracle-glow absolute inset-0" aria-hidden="true" />
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         <p className="type-meta" data-reveal="fade">
           The beginning
+        </p>
+        <p className="type-numeral mt-4" data-reveal="fade">
+          11<span className="type-numeral-colon">:</span>11
         </p>
         {/* One line, not a heading-plus-subtitle pair — and the line that
             actually sounds like Tarun speaking, not the site describing

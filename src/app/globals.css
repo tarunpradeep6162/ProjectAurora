@@ -355,6 +355,28 @@ body {
   color: var(--accent-soft);
 }
 
+/* Chapter 02's "11:11" — a real, specific moment, not a generic chapter
+   number, so it gets its own treatment rather than reusing .type-meta or
+   .type-chapter: a large, bold, geometric numeral (the body sans at its
+   heaviest loaded weight) matching the clean digital-clock digits in the
+   reference photo it was matched against, distinct from the site's serif
+   display type used everywhere else. */
+.type-numeral {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: clamp(2.75rem, 2.1rem + 3vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--aurora-ivory);
+  text-shadow: 0 0 28px color-mix(in srgb, var(--aurora-ivory) 45%, transparent);
+}
+
+.type-numeral-colon {
+  display: inline-block;
+  margin: 0 0.02em;
+  opacity: 0.55;
+}
+
 /* Story copy, reading mode: the letter. 18-20px on phones, up to 24px on a
    desktop, set in the serif with a long line-height. */
 .type-letter {
@@ -2215,11 +2237,26 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
-/* Chapter 02's warm bloom: a plain radial gradient (no photograph — the
-   site's own persistent galaxy shows through underneath instead), its
-   resting grade and the overexposed state it emerges from at the end of
-   the entry warp. Replaces the old `.miracle-photo`, which drove this same
-   transition off an <Image> that occluded the galaxy behind it. */
+/* Chapter 02's own dense, vivid nebula — matched to a specific reference
+   photo (saturated teal/cyan and magenta clouds on near-black) rather than
+   the shared persistent galaxy shader every other chapter also sits in
+   front of, which is deliberately much lower-contrast (see Nebula.tsx).
+   Pure CSS, no image asset: a dark base plus three screen-blended radial
+   gradients (cloud colour) and one normal-blended radial gradient (vignette,
+   keeps the frame's edges dark the way the reference does). Sits behind
+   `.miracle-glow` and the text, in front of the persistent WebGL sky. */
+.miracle-nebula {
+  background-color: #05060f;
+  background-image:
+    radial-gradient(ellipse 62% 60% at 24% 38%, rgba(27, 224, 206, 0.62) 0%, rgba(27, 224, 206, 0) 68%),
+    radial-gradient(ellipse 56% 58% at 72% 34%, rgba(230, 48, 158, 0.55) 0%, rgba(230, 48, 158, 0) 70%),
+    radial-gradient(ellipse 58% 55% at 52% 64%, rgba(140, 64, 214, 0.4) 0%, rgba(140, 64, 214, 0) 72%),
+    radial-gradient(ellipse 100% 92% at 50% 46%, transparent 28%, rgba(2, 3, 9, 0.88) 86%);
+  background-blend-mode: screen, screen, screen, normal;
+  filter: saturate(1.1);
+  opacity: 0.94;
+}
+
 .miracle-glow {
   opacity: 0.2;
   background: radial-gradient(
