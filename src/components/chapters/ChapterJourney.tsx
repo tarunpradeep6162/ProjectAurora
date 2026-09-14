@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
+import { usePointerParallax } from "@/hooks/usePointerParallax";
 import CosmicPath from "@/components/cosmic/CosmicPath";
 
 /**
@@ -17,8 +18,12 @@ import CosmicPath from "@/components/cosmic/CosmicPath";
  */
 export default function ChapterJourney() {
   const root = useRef<HTMLElement>(null);
+  const copyRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   useInViewReveal(root);
+  // The live site's own subtle mouse drift on chapter copy — recovered
+  // exact strength/damping (see usePointerParallax.ts).
+  usePointerParallax(copyRef);
 
   useGSAP(
     () => {
@@ -56,7 +61,7 @@ export default function ChapterJourney() {
     >
       <CosmicPath />
 
-      <div className="relative z-10 mx-auto w-full max-w-2xl text-center">
+      <div ref={copyRef} className="relative z-10 mx-auto w-full max-w-2xl text-center">
         <p className="type-meta" data-reveal="fade">
           Chapter 04
         </p>
