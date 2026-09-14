@@ -466,12 +466,20 @@ body {
 
 /* Fixed chrome (chapter menu, sound). Recedes completely while the candle
    holds its darkness and during the entry transition — see
-   `data-aurora-hush`, set by CandleInteraction and ChapterPortal. */
+   `data-aurora-hush`, set by CandleInteraction and ChapterPortal — and while
+   the finale chapter is active (`data-finale-hush`, set by ChapterNav from
+   the same active-chapter signal the "08 / 08" indicator already reads).
+   The finale is the site's closing chapter: on short viewports its own
+   in-page revisit links (Replay the Journey, etc.) can scroll directly
+   beneath this fixed corner control, and receding it there also matches
+   the direction that navigation chrome should give way to the dedication
+   rather than compete with it. */
 .chrome-recede {
   transition: opacity 0.9s var(--ease-soft), visibility 0s linear 0s;
 }
 
-html[data-aurora-hush] .chrome-recede {
+html[data-aurora-hush] .chrome-recede,
+html[data-finale-hush] .chrome-recede {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -2009,10 +2017,19 @@ html[data-aurora-hush] .hidden-star {
   padding-bottom: clamp(4rem, 16svh, 9rem);
 }
 
+/* The last line on the site, after the largest held silence on the page
+   (.finale-dedication's own margin-top). It was sized and coloured as a
+   quiet footer caption (12px, 58% alpha) — which reads as barely-there
+   rather than quiet-but-present, so after this much held darkness a
+   visitor could scroll straight past their own dedication without ever
+   registering it. Kept the same tracked, uppercase, unhurried treatment —
+   still a closing card, not a headline — just large and bright enough to
+   actually be the last thing read. */
 .finale-dedication .type-meta {
   margin: 0;
-  color: rgba(200, 168, 106, 0.58);
-  letter-spacing: 0.3em;
+  font-size: clamp(0.95rem, 0.85rem + 0.3vw, 1.15rem);
+  color: rgba(215, 185, 122, 0.85);
+  letter-spacing: 0.32em;
   line-height: 2.1;
 }
 

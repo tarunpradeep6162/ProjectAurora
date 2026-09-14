@@ -61,6 +61,18 @@ export default function ChapterNav() {
   // in some embedding contexts (see sceneProgress.ts).
   const activeIndex = useActiveChapterIndex();
   const current = chapters[activeIndex] ?? chapters[0];
+  const inFinale = activeIndex === chapters.length - 1;
+
+  // Let the finale close the site without this fixed control sitting over
+  // its own revisit links (see `.chrome-recede` / `data-finale-hush` in
+  // globals.css). Reuses the same active-chapter signal already driving the
+  // "08 / 08" indicator above, so no new observer is needed.
+  useEffect(() => {
+    const html = document.documentElement;
+    if (inFinale) html.setAttribute("data-finale-hush", "");
+    else html.removeAttribute("data-finale-hush");
+    return () => html.removeAttribute("data-finale-hush");
+  }, [inFinale]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
