@@ -13,9 +13,12 @@ import {
   createCakeMotion,
   ENTRANCE_SECONDS,
   FULLY_LIT_PROGRESS,
+  keyframes,
   stageCake,
   type CakeMotion,
 } from "./cakeMotion";
+import { installChimeUnlock, updateChime } from "./birthdayChime";
+import { isSiteAudioOn } from "@/lib/audioPreference";
 
 export type CakePhase = "lit" | "out" | "dark" | "stars" | "universe" | "revealed";
 
@@ -44,6 +47,20 @@ const ENVIRONMENT_INTENSITY = 0.3;
  */
 const EXPOSURE = 0.65;
 const AMBIENT_INTENSITY = 0.25;
+
+/**
+ * The chime's "sparkle" tier (see birthdayChime.ts): silent until the flames
+ * are out and smoke is rising, then rises to carry through the held
+ * darkness, holds through the return of the sky, and only much later (a
+ * visitor who lingers well past the finale) recedes.
+ */
+const CHIME_SPARKLE: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [1.2, 0],
+  [3, 1],
+  [20, 1],
+  [35, 0.3],
+];
 
 /** Framed so the whole cake sits inside the square with headroom for the smoke. */
 const CAMERA_POSITION: [number, number, number] = [0, 1.9, 6.6];
@@ -106,6 +123,13 @@ export function CakeWorld({
     }
   }, [phase]);
 
+  // A passive, page-level "start the chime on the first real gesture"
+  // listener (see birthdayChime.ts) — installed once the cake is actually
+  // relevant rather than from the moment the page loads.
+  useEffect(() => {
+    installChimeUnlock();
+  }, []);
+
   // Priority -1 runs this before anything that reads the motion this frame.
   useFrame((_, rawDelta) => {
     // A frame arriving after the canvas was paused off screen must not jump
@@ -117,6 +141,21 @@ export function CakeWorld({
     if (m.elapsed !== null) m.elapsed += delta;
     blowOut(m.elapsed, reduced, m);
     m.dim += (dimTarget.current - m.dim) * Math.min(1, delta * 1.6);
+
+    if (!reduced) {
+      const deep = Math.min(1, Math.max(0, (m.progress - 0.5) / 0.25));
+      const celebrate = m.elapsed === null ? 0 : keyframes(m.elapsed, CHIME_SPARKLE);
+      updateChime(
+        {
+          approach: m.present,
+          deep,
+          celebrate,
+          brightness: m.dim,
+          audible: isSiteAudioOn(),
+        },
+        delta
+      );
+    }
   }, -1);
 
   return (

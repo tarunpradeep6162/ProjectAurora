@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { chapters } from "@/lib/content";
 import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
+import { setSiteAudioOn } from "@/lib/audioPreference";
 
 const AUDIO_PREF_KEY = "aurora-audio-on";
 const BASE_VOLUME = 0.35;
@@ -32,6 +33,13 @@ export default function SiteAudioPlayer() {
   const [playing, setPlaying] = useState(false);
   const rampRef = useRef<number | null>(null);
   const activeIndex = useActiveChapterIndex();
+
+  // The birthday chime (birthdayChime.ts) reads this to decide whether it
+  // may make any sound at all — it should never speak up on its own if the
+  // visitor chose the site quiet.
+  useEffect(() => {
+    setSiteAudioOn(playing);
+  }, [playing]);
 
   useEffect(() => {
     const audio = audioRef.current;
