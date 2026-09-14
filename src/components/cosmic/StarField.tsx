@@ -8,16 +8,17 @@ import { gradeAt } from "./grade";
 
 /**
  * Star temperatures, weighted. Deliberately dominated by whites: an earlier
- * revision drew from a five-colour list that was three parts gold, which made
- * the sky read as a gold haze rather than as stars. Gold is the accent here,
- * not the population — a handful of Aurora-warm stars among mostly neutral
- * and slightly blue-white ones, which is also closer to how a real sky reads.
+ * revision drew from a five-colour list that was three parts accent, which
+ * made the sky read as a colour haze rather than as stars. Rose/violet is
+ * the accent here, not the population — a handful of warm-pink and
+ * lavender-white stars among mostly neutral ones, which is also closer to
+ * how a real sky reads.
  */
 const TEMPERATURES: Array<{ hex: string; weight: number }> = [
-  { hex: "#f1ece3", weight: 0.55 }, // neutral white
-  { hex: "#ddd3c5", weight: 0.22 }, // warm white
-  { hex: "#cfd8e8", weight: 0.15 }, // blue-white
-  { hex: "#d7b97a", weight: 0.08 }, // Aurora gold, occasional
+  { hex: "#f6eef3", weight: 0.55 }, // neutral white, faint pink cast
+  { hex: "#ecc9de", weight: 0.22 }, // warm pink-white
+  { hex: "#cfc2e8", weight: 0.15 }, // lavender-white
+  { hex: "#ff6ba5", weight: 0.08 }, // rose accent, occasional
 ];
 
 /**
@@ -151,7 +152,7 @@ function buildPoints(total: number) {
       positions[i * 3 + 1] = dir.y * radius * 0.62;
       positions[i * 3 + 2] = dir.z * radius - 20;
 
-      const c = isCore ? new THREE.Color("#e8dcc4") : pickTemperature();
+      const c = isCore ? new THREE.Color("#f0dcea") : pickTemperature();
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;

@@ -104,7 +104,7 @@ function buildNameTexture(name: string): THREE.CanvasTexture {
     ctx.font = "500 150px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#3a2a18";
+    ctx.fillStyle = "#4a1f30";
     if ("letterSpacing" in ctx) {
       (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "12px";
     }
@@ -201,11 +201,11 @@ export default function Cake({
       {/* Cake plate and its stand. */}
       <mesh position={[0, -0.94, 0]}>
         <cylinderGeometry args={[1.85, 1.9, 0.06, 48]} />
-        <meshStandardMaterial color="#d9c9a8" metalness={0.85} roughness={0.3} />
+        <meshStandardMaterial color="#d9a8c2" metalness={0.85} roughness={0.3} />
       </mesh>
       <mesh position={[0, -1.08, 0]}>
         <cylinderGeometry args={[0.32, 0.5, 0.24, 24]} />
-        <meshStandardMaterial color="#d9c9a8" metalness={0.85} roughness={0.34} />
+        <meshStandardMaterial color="#d9a8c2" metalness={0.85} roughness={0.34} />
       </mesh>
 
       {TIERS.map((tier, i) => (
@@ -231,8 +231,8 @@ export default function Cake({
       <mesh geometry={ribbons}>
         <meshStandardMaterial
           ref={ribbonRef}
-          color="#d8b478"
-          emissive="#6b4f2a"
+          color="#d98cae"
+          emissive="#5c2a42"
           emissiveIntensity={0.12}
           metalness={0.95}
           roughness={0.22}
@@ -241,7 +241,7 @@ export default function Cake({
 
       <mesh geometry={pearls}>
         <meshPhysicalMaterial
-          color="#fdf6ee"
+          color="#fdf1f6"
           roughness={0.12}
           metalness={0.1}
           clearcoat={1}
@@ -256,8 +256,8 @@ export default function Cake({
           <planeGeometry args={[1.1, 0.32]} />
           <meshStandardMaterial
             ref={plaqueRef}
-            color="#e8c98f"
-            emissive="#b58a62"
+            color="#e6a0c4"
+            emissive="#a34a72"
             emissiveIntensity={0.8}
             metalness={0.9}
             roughness={0.28}
@@ -281,7 +281,7 @@ export default function Cake({
         <sphereGeometry args={[0.5, 20, 14]} />
         <meshBasicMaterial
           ref={pulseMatRef}
-          color="#ffd9a0"
+          color="#ffb3d9"
           transparent
           opacity={0}
           depthWrite={false}
@@ -290,7 +290,7 @@ export default function Cake({
         />
       </mesh>
 
-      <pointLight ref={lightRef} color="#ffd4a8" intensity={0} distance={18} position={[0, 1.6, 0]} />
+      <pointLight ref={lightRef} color="#ffb3d9" intensity={0} distance={18} position={[0, 1.6, 0]} />
 
       {children}
     </group>

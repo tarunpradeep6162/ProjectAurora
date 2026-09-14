@@ -46,9 +46,9 @@ export function renderOgImage() {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          backgroundColor: "#050506",
+          backgroundColor: "#06050b",
           backgroundImage:
-            "radial-gradient(ellipse 120% 90% at 50% 118%, #3a2a18 0%, rgba(58,42,24,0) 62%), radial-gradient(ellipse 70% 60% at 78% -12%, #241d13 0%, rgba(36,29,19,0) 70%)",
+            "radial-gradient(ellipse 120% 90% at 50% 118%, #4a1f3a 0%, rgba(74,31,58,0) 62%), radial-gradient(ellipse 70% 60% at 78% -12%, #241333 0%, rgba(36,19,51,0) 70%)",
         }}
       >
         {STARS.map(([x, y, size, opacity], i) => (
@@ -61,7 +61,7 @@ export function renderOgImage() {
               width: size,
               height: size,
               borderRadius: size,
-              backgroundColor: "#f1ece3",
+              backgroundColor: "#f6eaf1",
               opacity,
             }}
           />
@@ -76,7 +76,7 @@ export function renderOgImage() {
             width: 460,
             height: 460,
             borderRadius: 460,
-            backgroundColor: "#bda882",
+            backgroundColor: "#c76a97",
             opacity: 0.12,
           }}
         />
@@ -86,7 +86,7 @@ export function renderOgImage() {
             display: "flex",
             fontSize: 84,
             letterSpacing: 22,
-            color: "#f1ece3",
+            color: "#f6eaf1",
             fontWeight: 600,
           }}
         >
@@ -98,7 +98,7 @@ export function renderOgImage() {
             display: "flex",
             width: 220,
             height: 1,
-            backgroundColor: "#d7b97a",
+            backgroundColor: "#e685ad",
             opacity: 0.6,
             marginTop: 38,
             marginBottom: 38,
@@ -110,7 +110,7 @@ export function renderOgImage() {
             display: "flex",
             fontSize: 34,
             letterSpacing: 14,
-            color: "#d7b97a",
+            color: "#e685ad",
           }}
         >
           FOR DHEEPIKA
@@ -121,7 +121,7 @@ export function renderOgImage() {
             display: "flex",
             fontSize: 24,
             letterSpacing: 10,
-            color: "#ddd3c5",
+            color: "#e3c3d8",
             opacity: 0.72,
             marginTop: 22,
           }}

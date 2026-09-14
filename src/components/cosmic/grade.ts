@@ -52,30 +52,35 @@ export type GradeStop = {
   hold?: readonly [number, number];
 };
 
-/** Ordered to match `chapters` in `@/lib/content` exactly. */
+/**
+ * Ordered to match `chapters` in `@/lib/content` exactly. Pink/violet love
+ * theme: every stop keeps its original near-black luminance, hold range and
+ * quiet/grain pacing — only the hue shifted, from amber-gold to violet and
+ * rose, the same "deep sky + a bloom of colour" structure throughout.
+ */
 export const GRADE_STOPS: GradeStop[] = [
   // 01 portal — opening black, sparse stars: the galaxy's edge.
-  { base: "#050506", glow: "#2a2118", glowStrength: 0.5, quiet: 0.15, grain: 1 },
-  // 02 miracle — early memories, warm brown-black. A real photograph sits
+  { base: "#06050b", glow: "#2a1a42", glowStrength: 0.5, quiet: 0.15, grain: 1 },
+  // 02 miracle — early memories, warm rose-black. A real photograph sits
   // behind the heading for the middle of the chapter.
   {
-    base: "#0d0a07",
-    glow: "#3a2a18",
+    base: "#0d0712",
+    glow: "#4a1f3a",
     glowStrength: 0.46,
     quiet: 0.36,
     grain: 0.55,
     hold: [0.4, 0.6],
   },
   // 03 story — the timeline and its constellation: more celestial structure.
-  { base: "#080a12", glow: "#23304a", glowStrength: 0.44, quiet: 0.1, grain: 0.9 },
-  // 04 journey — night indigo, the deepest "travelling" colour.
-  { base: "#06070f", glow: "#1a2036", glowStrength: 0.5, quiet: 0.18, grain: 0.85 },
+  { base: "#0a0814", glow: "#2f2050", glowStrength: 0.44, quiet: 0.1, grain: 0.9 },
+  // 04 journey — night violet, the deepest "travelling" colour.
+  { base: "#08060f", glow: "#241a40", glowStrength: 0.5, quiet: 0.18, grain: 0.85 },
   // 05 memories — deliberately neutral and quiet: full-frame photographs are
   // the subject for almost the whole pinned chapter, so the sky steps back
   // across that whole stretch rather than peaking at one point in it.
   {
-    base: "#080807",
-    glow: "#221c14",
+    base: "#0a0710",
+    glow: "#2c1a28",
     glowStrength: 0.26,
     quiet: 0.6,
     grain: 0.3,
@@ -84,8 +89,8 @@ export const GRADE_STOPS: GradeStop[] = [
   // 06 letter — calmer, warmer black; the universe turning inward while a
   // body of text is being read.
   {
-    base: "#0e0b08",
-    glow: "#3a2a1b",
+    base: "#0e0812",
+    glow: "#4a1f42",
     glowStrength: 0.5,
     quiet: 0.66,
     grain: 0.75,
@@ -93,15 +98,15 @@ export const GRADE_STOPS: GradeStop[] = [
   },
   // 07 birthday — near-total darkness, so one flame can carry the frame.
   {
-    base: "#040403",
-    glow: "#1e1408",
+    base: "#050308",
+    glow: "#2a0f22",
     glowStrength: 0.24,
     quiet: 0.8,
     grain: 0.6,
     hold: [0.35, 0.5],
   },
-  // 08 finale — obsidian and Aurora gold; the sky opening back up.
-  { base: "#070605", glow: "#4a3720", glowStrength: 0.6, quiet: 0.2, grain: 0.9 },
+  // 08 finale — obsidian and rose-violet; the sky opening back up.
+  { base: "#0a0710", glow: "#7c285c", glowStrength: 0.6, quiet: 0.2, grain: 0.9 },
 ];
 
 export type Grade = {

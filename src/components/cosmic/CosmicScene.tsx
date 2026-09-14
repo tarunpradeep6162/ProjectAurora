@@ -347,7 +347,7 @@ function DepthAtmosphere({
     fog.color.lerp(mixed, 1 - Math.exp(-Math.min(delta, 0.1) * 2.4));
   });
 
-  return <fog ref={fogRef} attach="fog" args={["#050506", 18, 60]} />;
+  return <fog ref={fogRef} attach="fog" args={["#06050b", 18, 60]} />;
 }
 
 /**
@@ -450,8 +450,8 @@ function Universe({
           nebula are self-shaded — so these are staged for people, not for
           the sky. */}
       <ambientLight intensity={0.22} />
-      <directionalLight position={[6, 8, 4]} intensity={0.55} color="#efe7d8" />
-      <pointLight position={[-8, -2, -6]} intensity={6} color="#d7b97a" distance={30} />
+      <directionalLight position={[6, 8, 4]} intensity={0.55} color="#f0d8ec" />
+      <pointLight position={[-8, -2, -6]} intensity={6} color="#d92d78" distance={30} />
       <DepthAtmosphere progressRef={progressRef} />
       <CosmicStarField count={quality.stars} progressRef={progressRef} />
       <CosmicNebula

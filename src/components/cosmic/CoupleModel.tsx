@@ -327,21 +327,21 @@ function LoadedCoupleModel({
 
   return (
     <group ref={groupRef} position={PLACEMENT} visible={false}>
-      {/* Warm gold key/rim, the site's Aurora gold — distance-limited so it
-          lights the figures without spilling onto the moons or nebula. */}
+      {/* Warm rose-gold key/rim, the site's Aurora accent — distance-limited
+          so it lights the figures without spilling onto the moons or nebula. */}
       <pointLight
         ref={keyLightRef}
         position={[1.6, 1.9, 1.4]}
-        color="#d7b97a"
+        color="#ff6ba5"
         intensity={0}
         distance={9}
         decay={2}
       />
-      {/* Cool night fill: desaturated indigo, never a saturated colour wash. */}
+      {/* Cool night fill: desaturated violet, never a saturated colour wash. */}
       <pointLight
         ref={fillLightRef}
         position={[-1.8, 1.1, 1.2]}
-        color="#8f9bb3"
+        color="#8f7fd8"
         intensity={0}
         distance={8}
         decay={2}
@@ -350,7 +350,7 @@ function LoadedCoupleModel({
       <pointLight
         ref={rimLightRef}
         position={[-0.6, 1.7, -2.2]}
-        color="#cfd8e8"
+        color="#d8c9f0"
         intensity={0}
         distance={7}
         decay={2}
