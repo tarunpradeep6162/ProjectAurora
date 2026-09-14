@@ -1,16 +1,34 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import * as THREE from "three";
 import CosmicMoon from "./Moon";
 import CosmicNebula from "./Nebula";
 import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
+import PhotoDissolve from "./PhotoDissolve";
+import StardustTrail from "./StardustTrail";
+import AuroraRelic from "./AuroraRelic";
+import MemoryBlocks from "./MemoryBlocks";
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
+import {
+  TheatreClock,
+  useTheatreCameraCorrection,
+  useTheatreWorldOffset,
+  type TheatreCameraCorrection,
+} from "@/theatre/TheatreDirector";
 
 /* ------------------------------------------------------------------------
    Quality tiers
@@ -222,9 +240,12 @@ const DEG = Math.PI / 180;
 function CameraRig({
   progressRef,
   pointerParallax,
+  correctionRef,
 }: {
   progressRef: RefObject<SceneProgressRef>;
   pointerParallax: boolean;
+  /** Theatre's "Camera" object, mirrored into a ref — see TheatreDirector.tsx. Defaults are all no-ops, so this is inert until someone opens Studio locally and nudges a value. */
+  correctionRef: RefObject<TheatreCameraCorrection>;
 }) {
   const targetRef = useRef<Pose | null>(null);
   const currentRef = useRef<(Pose & { ready: boolean }) | null>(null);
@@ -281,14 +302,15 @@ function CameraRig({
 
     timeRef.current += dt;
     const t = timeRef.current;
-    const drift = cur.drift;
+    const correction = correctionRef.current;
+    const drift = cur.drift * (correction?.driftMultiplier ?? 1);
     // Idle float: incommensurate ~31s / ~23s periods, a few centimetres.
     const ox = (Math.sin(t * 0.2027) * 0.06 + p.sx * 0.18) * drift;
     const oy = (Math.sin(t * 0.2732 + 1.3) * 0.045 + p.sy * 0.1) * drift;
 
-    const px = cur.x + ox;
-    const py = cur.y + oy;
-    const pz = cur.z;
+    const px = cur.x + ox + (correction?.boostX ?? 0);
+    const py = cur.y + oy + (correction?.boostY ?? 0);
+    const pz = cur.z + (correction?.boostZ ?? 0);
     camera.position.set(px, py, pz);
 
     const yaw = cur.yaw * DEG;
@@ -300,8 +322,9 @@ function CameraRig({
       pz - Math.cos(yaw) * cosPitch * 20
     );
 
-    if (camera.isPerspectiveCamera && Math.abs(camera.fov - cur.fov) > 1e-3) {
-      camera.fov = cur.fov;
+    const targetFov = cur.fov + (correction?.fovBias ?? 0);
+    if (camera.isPerspectiveCamera && Math.abs(camera.fov - targetFov) > 1e-3) {
+      camera.fov = targetFov;
       camera.updateProjectionMatrix();
     }
   });
@@ -429,6 +452,28 @@ function QualityStamp({
    Scene
    ------------------------------------------------------------------------ */
 
+/**
+ * Wraps every *visual* object in the scene — stars, nebula, moons, Tarun,
+ * the couple, the photo dissolve — so Theatre's "World" object (see
+ * auroraProject.ts) has one real group to offset. Lights and the camera
+ * stay outside this group deliberately: an offset world should still be lit
+ * and framed correctly, not dragged out of its own key/fill/rim lighting.
+ * Defaults to (0,0,0) — a real, live, currently-inert hook, not a redesign
+ * of the existing scene graph's actual layout.
+ */
+function WorldGroup({ children }: { children: ReactNode }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const offsetRef = useTheatreWorldOffset();
+
+  useFrame(() => {
+    const group = groupRef.current;
+    const offset = offsetRef.current;
+    if (group && offset) group.position.copy(offset);
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+}
+
 function Universe({
   progressRef,
   tier,
@@ -444,6 +489,8 @@ function Universe({
   pointerParallax: boolean;
   onOverBudget: () => void;
 }) {
+  const cameraCorrectionRef = useTheatreCameraCorrection();
+
   return (
     <>
       <QualityStamp tier={tier} quality={quality} degrade={degrade} />
@@ -454,21 +501,32 @@ function Universe({
       <directionalLight position={[6, 8, 4]} intensity={0.55} color="#e8dce4" />
       <pointLight position={[-8, -2, -6]} intensity={6} color="#8c526e" distance={30} />
       <DepthAtmosphere progressRef={progressRef} />
-      <CosmicStarField count={quality.stars} progressRef={progressRef} />
-      <CosmicNebula
+      <WorldGroup>
+        <CosmicStarField count={quality.stars} progressRef={progressRef} />
+        <CosmicNebula
+          progressRef={progressRef}
+          octaves={quality.nebulaOctaves}
+          warp={quality.nebulaWarp}
+        />
+        <CosmicMoon progressRef={progressRef} segments={quality.moonSegments} />
+        <CosmicMoon
+          variant="secondary"
+          progressRef={progressRef}
+          segments={Math.max(16, Math.round(quality.moonSegments * 0.66))}
+        />
+        <CoupleModel progressRef={progressRef} />
+        <TarunRunner progressRef={progressRef} />
+        <PhotoDissolve progressRef={progressRef} />
+        <AuroraRelic progressRef={progressRef} />
+        <MemoryBlocks progressRef={progressRef} />
+      </WorldGroup>
+      <CameraRig
         progressRef={progressRef}
-        octaves={quality.nebulaOctaves}
-        warp={quality.nebulaWarp}
+        pointerParallax={pointerParallax}
+        correctionRef={cameraCorrectionRef}
       />
-      <CosmicMoon progressRef={progressRef} segments={quality.moonSegments} />
-      <CosmicMoon
-        variant="secondary"
-        progressRef={progressRef}
-        segments={Math.max(16, Math.round(quality.moonSegments * 0.66))}
-      />
-      <CoupleModel progressRef={progressRef} />
-      <TarunRunner progressRef={progressRef} />
-      <CameraRig progressRef={progressRef} pointerParallax={pointerParallax} />
+      <StardustTrail progressRef={progressRef} />
+      <TheatreClock progressRef={progressRef} />
       <FrameBudget onOverBudget={onOverBudget} />
     </>
   );
