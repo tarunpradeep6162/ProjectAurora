@@ -2,7 +2,9 @@
 
 Status document for the `feature/aurora-v3-active-theory` branch (checked
 out from `master` at commit `1b1238c`, which remains fully intact and
-unmodified). Concise and factual, per this phase's own instruction.
+unmodified). Concise and factual, per this phase's own instruction. Covers
+two passes now: the photo-dissolve pass (commit `85f8215`) and this
+"Theatre World" pass (commits `7020a7c`, `f60416c`, `a5bdf79`).
 
 ## What V3 actually is, right now
 
@@ -10,46 +12,90 @@ Not a rewrite. The existing architecture — one persistent R3F canvas
 (`CosmicBackdrop` → `CosmicScene`), a shared scroll-progress store
 (`sceneProgress.ts`), GSAP for DOM motion, Lenis for smooth scroll — is
 **still the whole site's foundation**, unchanged, and still correct (see
-`ACTIVE_THEORY_AURORA_REDESIGN.md` from the prior pass for why most of the
-Active Theory principles already held before this pass even started).
+`ACTIVE_THEORY_AURORA_REDESIGN.md` from the earliest pass for why most of
+the Active Theory principles already held before V3 even started).
 
-This pass added exactly one new real-time system to that existing
-foundation: `PhotoDissolve.tsx`, a genuine GPU particle transition for
-Journey's signature shot, mounted inside the same persistent canvas
-alongside `TarunRunner` and `CoupleModel`.
+Each pass has added real, verified systems on top of that foundation
+rather than replacing it: `PhotoDissolve.tsx` (photo→particle transition),
+now `StardustTrail.tsx` (pointer/touch particle trail) and a genuine, if
+partial, Theatre.js layer (`src/theatre/`) actually driving the camera and
+a world-offset group — not just installed.
 
-## New files this pass
+## This pass's changes
 
-- `src/components/cosmic/PhotoDissolve.tsx` — the particle dissolve (detail
-  in `ACTIVE_THEORY_TRANSLATION.md`).
+- **P0 fixed**: Journey's own DOM `ScrollTrigger` and `sceneProgress`'s
+  canonical chapter-progress signal disagreed because they measured
+  genuinely different scroll windows (`start:"top 70%",end:"bottom 40%"`
+  vs. document-space viewport-center-crossing over the section's real
+  bounds) — not a miscalibration of one shared idea, but two different
+  ideas. `ChapterJourney.tsx` no longer has its own `ScrollTrigger`; its
+  GSAP timeline is now driven by `tl.progress()` from `sceneProgress`'s
+  `chapterProgress` every frame (`subscribeSceneFrame`, the same pattern
+  `CosmicAtmosphere` already used for CSS custom properties). Verified
+  against live `getBoundingClientRect` math: reported progress matched
+  computed progress to four decimal places at a sampled mid-chapter
+  position, and read exactly 0/1 outside the chapter's real bounds, where
+  it previously read 0.86 at a scroll position before the chapter had even
+  started.
+- **`public/models/couple.glb` added.** Verified at the raw glTF JSON
+  level (not just the accompanying doc): clip names are exactly
+  `IdleTogether`, `WalkTogether`, `EmbraceLoop`. The existing
+  `CoupleModel.tsx` loader's name-matching heuristic already selects
+  `IdleTogether` correctly with no code change; `WalkTogether`/
+  `EmbraceLoop` are not yet wired to anything (see "what's still owed"
+  below).
+- **`src/theatre/` — a real Theatre.js layer**, detailed in
+  `THEATRE_AUTHORING_GUIDE.md`.
+- **`src/components/cosmic/StardustTrail.tsx`** — the pointer/touch
+  particle trail, detailed in `ACTIVE_THEORY_TRANSLATION.md`.
+
+## Files from the earlier photo-dissolve pass (unchanged this pass)
+
+- `src/components/cosmic/PhotoDissolve.tsx` — the particle dissolve.
 - `src/hooks/useWebGLActive.ts` — lets DOM components know whether the
   canvas is actually live, so exactly one of "real WebGL effect" / "DOM
   fallback" renders at a time, never both.
 - `src/components/chapters/ChapterJourney.tsx` — the signature ghost's own
-  image+embers now suppress themselves when `PhotoDissolve` is carrying the
-  shot instead.
+  image+embers still suppress themselves when `PhotoDissolve` is carrying
+  the shot instead (this pass additionally changed this file's *progress
+  source*, not this suppression logic).
 
 ## New dependencies
 
 `@theatre/core` (production) and `@theatre/studio` (dev only — never
 imported outside a dev-gated path, so it cannot ship in the production
-bundle). See `THEATRE_AUTHORING_GUIDE.md` for the compatibility finding
-that shaped this: `@theatre/r3f` requires React Three Fiber `^8.13.6`; this
-project runs `^9.7.0`. That's a hard peer-dependency conflict, not a
-judgment call, confirmed directly against the npm registry. `@theatre/core`
-and `@theatre/studio` both have zero React/R3F peer constraints, so they
-install cleanly; `@theatre/r3f` was not installed.
+bundle, verified this pass by confirming the string `"Outline Menu"`,
+which only exists in Studio's own UI code, appears nowhere in a production
+`next build` output). See `THEATRE_AUTHORING_GUIDE.md` for the
+compatibility finding that shaped this: `@theatre/r3f` requires React
+Three Fiber `^8.13.6`; this project runs `^9.7.0`. That's a hard
+peer-dependency conflict, not a judgment call, confirmed directly against
+the npm registry. `@theatre/core` and `@theatre/studio` both have zero
+React/R3F peer constraints, so they install cleanly; `@theatre/r3f` was not
+installed.
 
-**Theatre.js is not yet wired to drive anything.** It's evaluated,
-installed, and ready — the actual integration (Theatre driving the camera,
-lighting, or a scene transition via `@theatre/core`'s vanilla API against
-existing refs, per the brief's own fallback plan) is unstarted. This was a
-deliberate prioritization, not an oversight: with limited time, building
-the *mandatory*, concretely-scoped, highly-narrative GPU particle dissolve
-correctly was judged more valuable than wiring Theatre into a camera system
-that is already well-tuned (a hand-authored monotone-cubic spline through
-chapter keyframes) and risking a regression there for architecture's own
-sake.
+**Theatre.js now genuinely drives something real**, as of this pass:
+`src/theatre/auroraProject.ts` creates one project, one master sheet, and
+nine semantic objects; `src/theatre/TheatreDirector.tsx` drives the master
+sequence's `position` every frame from the canonical `storyPosition`
+signal (verified live: Studio's own timeline playhead scrubs in real time
+while scrolling the actual site), and a small camera-correction layer
+(`fovBias`, `driftMultiplier`, `positionBoost`) plus a world-offset group
+are genuinely applied to the live scene every frame in `CosmicScene.tsx`
+(`CameraRig`, `WorldGroup`) — both default to exact no-ops, so nothing
+about the shipped camera arc or world layout changed, but a human opening
+Studio locally can nudge either and see it live.
+
+**What Theatre does *not* yet do**: fully own the primary per-chapter
+camera arc (`CAMERA_KEYS`/`sampleCameraArc` in `CosmicScene.tsx` is
+unchanged and still computes the actual pose every frame — Theatre's
+correction layer sits on top of it, not in place of it), or drive
+`HeroWorld`/`JourneyWorld`/`JourneyLight`/`ConstellationWorld`/
+`CoupleWorld`/`BirthdayWorld`/`FinaleWorld` (these six objects exist, with
+sensible default props, inspectable in Studio, but nothing in the scene
+reads their values yet). See `THEATRE_AUTHORING_GUIDE.md` for exactly why
+the camera arc itself wasn't keyframed this pass, and what the real next
+step looks like.
 
 ## A real bug found while verifying this pass, not yet fixed
 

@@ -52,6 +52,30 @@ are the real budget context this shares.
   exists in the shipped site. `@theatre/studio` is a devDependency
   specifically so it can never ship even by accident.
 
+## This pass's additions
+
+- **StardustTrail**: one `BufferGeometry` sized for a fixed 420-particle
+  pool (140 on coarse-pointer/narrow-viewport devices) — allocated once,
+  never resized. Per-frame cost when idle (no pointer movement): one
+  `useFrame` closure doing a handful of scalar comparisons, zero buffer
+  writes (the `spawnCount > 0` branch, which is the only place attribute
+  arrays are touched, is skipped entirely). Per-frame cost while actively
+  spawning: at most 3 particles' worth of `BufferAttribute.setXYZ` calls
+  (2 on mobile) — small, fixed, and independent of total particle count.
+  Not separately profiled against an FPS counter this pass; verified only
+  by direct observation (screenshots, console) that it doesn't visibly
+  affect frame pacing during interactive testing.
+- **Theatre.js runtime cost**: `TheatreClock`'s `useFrame` sets one number
+  (`masterSheet.sequence.position`) every frame — Theatre's internal
+  reactive graph (`onValuesChange` subscribers on two objects, "Camera"
+  and "World") re-evaluates from that on frames where the value actually
+  changed. Not benchmarked in isolation this pass; the production build's
+  bundle size is the more relevant number here since `@theatre/core` has
+  no per-frame cost proportional to scene complexity (it's a value graph,
+  not a renderer). `@theatre/studio` — the actually-heavy dev-only
+  package — confirmed absent from the production output (see
+  `THEATRE_AUTHORING_GUIDE.md`).
+
 ## Recommended next profiling step (not done this pass)
 
 Before extending `PhotoDissolve`-style shaders to more chapters (the

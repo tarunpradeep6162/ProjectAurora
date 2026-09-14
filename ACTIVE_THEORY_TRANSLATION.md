@@ -45,6 +45,42 @@ few thousand and was verified visually coherent at that scale before
 settling there; it was not profiled against an FPS counter this pass (see
 `AURORA_V3_PERFORMANCE.md` for what was and wasn't measured).
 
+## The other signature shot: the stardust pointer/touch trail
+
+| Active Theory principle | Aurora V3 translation |
+|---|---|
+| The pointer has real presence in the world, not just a CSS hover state | `StardustTrail.tsx` places particles along the ray from the camera through the pointer's own NDC position, in the actual 3D scene, not a 2D DOM overlay. |
+| Motion should respond to *how* you move, not just where you are | Emission is driven by smoothed pointer/touch velocity (NDC units/sec), not raw position — a still cursor emits nothing; a fast one emits near the (hard) clamp. |
+| Restraint: presence, not spectacle | "No giant follower circle" — implemented as a genuinely short-lived trail (0.55-1.25s per particle) that provably fades to nothing within ~2s of no movement, verified live, not just a config value. |
+| Context-aware — a device doesn't behave the same everywhere | Per-chapter intensity table (full by default, 0.4 during photographs, 0 during Letter/Birthday, 0.15 during the finale) damped smoothly, not switched abruptly, so a chapter transition never pops the trail on/off. |
+
+`src/components/cosmic/StardustTrail.tsx`: one `THREE.Points`, one
+`BufferGeometry` with a fixed-size ring buffer (420 particles desktop, 140
+mobile), one GLSL shader pair. Spawning writes only the newly-touched
+particle slots' attributes (`position`, `aVelocity`, `aBirth`,
+`aLifetime`, `aColor`) each frame — never a full-buffer rewrite. Age is
+computed in the vertex shader from a `uTime` uniform minus each particle's
+own `aBirth`, so idle (never-yet-spawned) particles carry `aBirth = -9999`
+and are simply always-fully-faded, with no separate "hide unused slots"
+branch needed. Palette is weighted toward warm ivory/champagne
+(`#efe0c0`), with rare rose (`#c98fa0`) and lavender (`#a79bc4`) — never
+rainbow, matching this project's existing accent family.
+
+Verified live, not just written: dragged the pointer across chapter 01 and
+observed a genuine warm additive-blended glow at the cursor's path that
+faded to nothing within ~2 seconds of stopping; repeated the same drag on
+chapter 07 (Birthday) and confirmed zero visible trail; repeated again on
+chapter 04 (Journey, default intensity) and confirmed the trail resumed.
+Zero console errors across all three states.
+
+**Not verified this pass**: an OS-level `prefers-reduced-motion` live
+toggle test specifically for this new component (the Browser pane tooling
+available this pass had no direct control for that emulation). The gate
+itself (`if (reduced) return null` via the project's existing
+`useReducedMotion()` hook) is the identical, already-proven pattern used
+by every other motion-bearing component in this codebase — trusted by
+code-pattern consistency rather than re-proven live for this one file.
+
 ## What's still owed from the brief's fuller Journey-world spec
 
 Indigo fog, celestial dust replacing the current dust treatment, a soft
