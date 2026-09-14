@@ -64,20 +64,23 @@ const MOBILE_COUNT = 46;
 
 // Mostly pink/rose/peach/cream/yellow, less red/orange, rare magenta —
 // weighted by repetition rather than a separate probability table, so the
-// mix stays readable as "a natural garden," not a rainbow.
+// mix stays readable as "a natural garden," not a rainbow. Raised in
+// saturation/brightness from an earlier, muddier pass — confirmed live the
+// garden read as dull/washed out next to real tulip photography, which is
+// far more saturated than this scene's moody dark backdrop suggested.
 const PALETTE: THREE.Color[] = [
-  new THREE.Color("#e8879e"),
-  new THREE.Color("#e8879e"),
-  new THREE.Color("#c1476b"),
-  new THREE.Color("#c1476b"),
-  new THREE.Color("#e8a26b"),
-  new THREE.Color("#e8a26b"),
-  new THREE.Color("#f0e4c8"),
-  new THREE.Color("#f0e4c8"),
-  new THREE.Color("#e8d17a"),
-  new THREE.Color("#b8394a"),
-  new THREE.Color("#d97a3d"),
-  new THREE.Color("#c14a8a"), // rare magenta
+  new THREE.Color("#f4789e"),
+  new THREE.Color("#f4789e"),
+  new THREE.Color("#e01f4f"),
+  new THREE.Color("#e01f4f"),
+  new THREE.Color("#f68a3d"),
+  new THREE.Color("#f68a3d"),
+  new THREE.Color("#fdf2d5"),
+  new THREE.Color("#fdf2d5"),
+  new THREE.Color("#f7d23e"),
+  new THREE.Color("#c81238"),
+  new THREE.Color("#e8631f"),
+  new THREE.Color("#d61f95"), // rare magenta
 ];
 
 const LEAF_GREEN = new THREE.Color("#1c3320");
@@ -155,7 +158,12 @@ function buildPetalGeometry(): THREE.BufferGeometry {
   const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
     const t = THREE.MathUtils.clamp(pos.getY(i), 0, 1);
-    const shade = THREE.MathUtils.lerp(0.55, 1.0, t);
+    // Steeper contrast than an earlier pass's 0.55-1.0 — that range read as
+    // flat/dull under this scene's dark, point-lit backdrop. The tip now
+    // pushes past 1.0 (an HDR-ish highlight ACES tonemapping can render as
+    // real brightness, not a clamp), so the petal has a genuine lit pop
+    // near its rim instead of just "less dark" shading.
+    const shade = THREE.MathUtils.lerp(0.45, 1.15, t);
     colors[i * 3] = shade;
     colors[i * 3 + 1] = shade;
     colors[i * 3 + 2] = shade;
@@ -264,8 +272,11 @@ function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
 
     const color = PALETTE[Math.floor(rand() * PALETTE.length)].clone();
     // Far flowers desaturate and darken into the atmosphere rather than
-    // just becoming smaller — real depth, not just scale.
-    const fogAmount = (1 - depthFactor) * 0.55;
+    // just becoming smaller — real depth, not just scale. Eased back from
+    // an earlier pass's 0.55 max — that washed even midground flowers most
+    // of the way to near-black, flattening color/contrast across the whole
+    // garden rather than just the true background layer.
+    const fogAmount = (1 - depthFactor) * 0.35;
     color.lerp(DISTANCE_FOG, fogAmount);
 
     const leafCount: 1 | 2 = rand() < 0.35 ? 1 : 2;
@@ -562,11 +573,15 @@ function GardenMeshes({
       >
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.32}
+          roughness={0.26}
           metalness={0}
-          clearcoat={0.25}
-          clearcoatRoughness={0.4}
-          sheen={0.7}
+          clearcoat={0.3}
+          clearcoatRoughness={0.35}
+          // Sheen cut from 0.7 — at that strength its pale highlight layer
+          // was washing the baked petal colour toward white across most of
+          // the surface, a real contributor to the "dull/muted" read
+          // alongside the palette and lighting.
+          sheen={0.25}
           sheenColor={new THREE.Color("#fff4e0")}
           side={THREE.DoubleSide}
           transparent
