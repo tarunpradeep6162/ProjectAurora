@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import Cake from "./Cake";
 import CakeCandles from "./CakeCandles";
+import Confetti from "./Confetti";
+import ShapeBursts from "./ShapeBursts";
 import {
   blowOut,
   createCakeMotion,
@@ -123,6 +125,11 @@ export function CakeWorld({
       <Cake motion={motion} reduced={reduced} name={name}>
         <CakeCandles motion={motion} reduced={reduced} count={compact ? 5 : 7} />
       </Cake>
+      {/* The post-wish celebration: absent until the candles have actually
+          been blown out (`elapsed` stays null until then), so it never
+          appears while the candles are still lit. */}
+      <ShapeBursts motion={motion} reduced={reduced} compact={compact} />
+      <Confetti motion={motion} reduced={reduced} compact={compact} />
     </>
   );
 }

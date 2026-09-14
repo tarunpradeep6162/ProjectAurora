@@ -4,23 +4,11 @@
  * owned object instead of returning a new one, because they run every frame.
  */
 
+import { keyframes } from "@/lib/curves";
+
 type Frames = ReadonlyArray<readonly [number, number]>;
 
-/** Piecewise-linear lookup, clamped at both ends. */
-export function keyframes(t: number, frames: Frames): number {
-  const first = frames[0];
-  const last = frames[frames.length - 1];
-  const x = Math.min(last[0], Math.max(first[0], t));
-  for (let i = 0; i < frames.length - 1; i++) {
-    const [t0, v0] = frames[i];
-    const [t1, v1] = frames[i + 1];
-    if (x <= t1) {
-      const k = t1 === t0 ? 0 : (x - t0) / (t1 - t0);
-      return v0 + (v1 - v0) * k;
-    }
-  }
-  return last[1];
-}
+export { keyframes };
 
 /** Seconds for the entrance to run from nothing to fully lit. */
 export const ENTRANCE_SECONDS = 4.5;
