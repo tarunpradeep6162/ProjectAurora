@@ -58,6 +58,42 @@ export const theatreWorld = masterSheet.object("World", {
 });
 
 /**
+ * The Aurora Relic — the hero's central sculptural object
+ * (`AuroraRelic.tsx`). A correction layer over its own hand-authored idle
+ * motion (rotation drift, breathing position), exactly the same shape as
+ * the Camera object above: defaults are no-ops, real and live once
+ * someone opens Studio and nudges them.
+ */
+export const theatreAuroraRelic = masterSheet.object("AuroraRelic", {
+  rotationBoost: types.compound({
+    x: types.number(0, { range: [-1, 1] }),
+    y: types.number(0, { range: [-1, 1] }),
+    z: types.number(0, { range: [-1, 1] }),
+  }),
+  positionBoost: types.compound({
+    x: types.number(0, { range: [-1, 1] }),
+    y: types.number(0, { range: [-1, 1] }),
+    z: types.number(0, { range: [-1, 1] }),
+  }),
+  scaleMultiplier: types.number(1, { range: [0.5, 1.5], label: "Scale ×" }),
+});
+
+/** The Relic's dedicated three-point-style lighting — genuinely applied every frame in AuroraRelic.tsx, not a correction layer this time, since these lights have no other authored source to correct. */
+export const theatreRelicKey = masterSheet.object("RelicKey", {
+  intensity: types.number(2.4, { range: [0, 6] }),
+  color: types.rgba({ r: 0.94, g: 0.88, b: 0.75, a: 1 }),
+});
+export const theatreRelicRim = masterSheet.object("RelicRim", {
+  intensity: types.number(1.6, { range: [0, 6] }),
+  color: types.rgba({ r: 0.68, g: 0.62, b: 0.86, a: 1 }),
+});
+
+/** The floating memory-block field around the Relic (`MemoryBlocks.tsx`). `assembly` is how "apart" the blocks sit — 1 is their authored resting positions; a future entry sequence could animate this toward 0 (gathered) or beyond 1 (separating) without this pass having to build that sequence now. */
+export const theatreMemoryBlocks = masterSheet.object("MemoryBlocks", {
+  assembly: types.number(1, { range: [0, 1.6], label: "Assembly" }),
+});
+
+/**
  * Created as real, inspectable, Studio-editable objects per the brief's
  * named list — not yet wired into any visual output. Honestly unfinished:
  * see AURORA_V3_ARCHITECTURE.md for exactly what "wired" would mean for

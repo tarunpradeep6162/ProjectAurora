@@ -18,6 +18,8 @@ import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
 import PhotoDissolve from "./PhotoDissolve";
 import StardustTrail from "./StardustTrail";
+import AuroraRelic from "./AuroraRelic";
+import MemoryBlocks from "./MemoryBlocks";
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -515,6 +517,8 @@ function Universe({
         <CoupleModel progressRef={progressRef} />
         <TarunRunner progressRef={progressRef} />
         <PhotoDissolve progressRef={progressRef} />
+        <AuroraRelic progressRef={progressRef} />
+        <MemoryBlocks progressRef={progressRef} />
       </WorldGroup>
       <CameraRig
         progressRef={progressRef}
