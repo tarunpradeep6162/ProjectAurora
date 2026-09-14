@@ -81,6 +81,37 @@ itself (`if (reduced) return null` via the project's existing
 by every other motion-bearing component in this codebase — trusted by
 code-pattern consistency rather than re-proven live for this one file.
 
+## The hero centerpiece: the Aurora Relic + memory blocks
+
+| Active Theory principle | Aurora V3 translation |
+|---|---|
+| One unforgettable sculptural object, carefully staged | `AuroraRelic.tsx` — two intertwined, tapering tube forms, an abstract embrace rather than a literal one, the hero's one central object. |
+| Floating fragments at real depth, some near-camera, some behind | `MemoryBlocks.tsx` — an instanced field across near/mid/far z-bands relative to the portal camera, not a flat decorative scatter. |
+| Reflective, premium materials without heavy realtime cost | `MeshPhysicalMaterial` with a modest `clearcoat` (not full `transmission`/reflection probes) — reads as polished without the GPU cost. |
+| Restrained pointer presence, not a game | Fine-pointer-only rotation bias on the Relic (a couple of degrees) and depth-scaled parallax on the blocks, both damped, both off for touch. |
+
+**Relic geometry**: `THREE.TubeGeometry` around a `CatmullRomCurve3`
+path, two strands (phase-offset by π). The *path's* own distance from the
+shared axis tapers to ~0 at both ends (`sin(t·π)` envelope) while the
+tube's cross-sectional radius stays constant — core `TubeGeometry` has no
+native per-point radius control, so the taper lives in the curve instead.
+A documented, working simplification, not an oversight.
+
+**Blocks**: `RoundedBoxGeometry` (real bevel, from `three/examples/jsm`,
+the same import path `CoupleModel.tsx` already established for
+`GLTFLoader`), three `InstancedMesh` groups by material family (dark
+glass / champagne / rose), one shared geometry per shape reused across
+every instance of that shape. Deterministic seeded layout (25 November,
+this project's own recurring seed) — never `Math.random()` at render.
+
+**Not built this pass** (all explicitly out of scope, not silently
+dropped): the "Enter Our Universe" camera-through-blocks entry sequence,
+block→photo transitions, Journey/Couple/Birthday/Finale reuse of the same
+blocks, and dedicated `RELIC_REVEAL`/`BLOCK_ASSEMBLY`/etc. Theatre
+sequence ranges (the existing single master-clock mapping is unchanged).
+See `AURORA_V3_ARCHITECTURE.md` for the confirmed, real, unresolved
+mobile-visibility issue found while testing this system.
+
 ## What's still owed from the brief's fuller Journey-world spec
 
 Indigo fog, celestial dust replacing the current dust treatment, a soft

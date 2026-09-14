@@ -3,8 +3,35 @@
 Status document for the `feature/aurora-v3-active-theory` branch (checked
 out from `master` at commit `1b1238c`, which remains fully intact and
 unmodified). Concise and factual, per this phase's own instruction. Covers
-two passes now: the photo-dissolve pass (commit `85f8215`) and this
-"Theatre World" pass (commits `7020a7c`, `f60416c`, `a5bdf79`).
+three passes now: the photo-dissolve pass (`85f8215`), the "Theatre World"
+pass (`7020a7c`, `f60416c`, `a5bdf79`, `206688b`), and this "Aurora Relic"
+pass (`1abd746`).
+
+## The Aurora Relic + memory blocks (this pass)
+
+`AuroraRelic.tsx` and `MemoryBlocks.tsx` — the hero's missing signature 3D
+object and its surrounding floating fragments. Full detail in
+`ACTIVE_THEORY_TRANSLATION.md`. Confirmed working via extensive live
+screenshots on desktop across multiple sizing/positioning iterations, and
+confirmed registered as real Theatre objects (`AuroraRelic`, `RelicKey`,
+`RelicRim`, `MemoryBlocks`) in Studio's own Outline panel.
+
+**Known, real, unresolved issue**: both are confirmed *absent* — not just
+small — on a 375×812 mobile viewport, checked at several scroll positions
+inside the portal chapter with Theatre's own UI hidden out of the way for
+a clean view. Two different fixes were attempted (a continuous
+aspect-ratio-based x-offset, then a simpler device-tier boolean matching
+the pattern `MemoryBlocks.tsx` already used successfully for its own
+particle count) — neither made the Relic reappear on mobile. A
+console/`window`-counter-based debugging attempt to find the root cause
+produced results (a `useFrame` callback apparently never firing) that
+directly contradicted the visual evidence on desktop, where the same
+component was clearly rendering and updating — meaning that specific
+debugging technique is unreliable in this environment and its results
+were discarded rather than trusted. The desktop implementation is real
+and unaffected; the mobile absence is a genuine, reproducible, but
+currently unexplained gap. Not silently shipped as "mobile-ready" — this
+is the honest state.
 
 ## What V3 actually is, right now
 
