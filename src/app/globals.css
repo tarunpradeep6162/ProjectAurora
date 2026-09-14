@@ -2215,17 +2215,25 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
-/* Chapter 02's photograph: its resting grade, and the overexposed state it
-   emerges from at the end of the entry warp. */
-.miracle-photo {
+/* Chapter 02's warm bloom: a plain radial gradient (no photograph — the
+   site's own persistent galaxy shows through underneath instead), its
+   resting grade and the overexposed state it emerges from at the end of
+   the entry warp. Replaces the old `.miracle-photo`, which drove this same
+   transition off an <Image> that occluded the galaxy behind it. */
+.miracle-glow {
   opacity: 0.2;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 45%,
+    color-mix(in srgb, var(--accent) 55%, transparent) 0%,
+    transparent 70%
+  );
   transition:
     opacity 1.8s var(--ease-soft),
     transform 2.4s var(--ease-cinematic),
     filter 1.8s var(--ease-soft);
 }
 
-#miracle[data-emerge="light"] .miracle-photo {
+#miracle[data-emerge="light"] .miracle-glow {
   opacity: 0.8;
   transform: scale(1.06);
   filter: brightness(2.1) saturate(0.35) blur(8px);
