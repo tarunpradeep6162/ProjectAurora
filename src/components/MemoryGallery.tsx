@@ -65,25 +65,23 @@ export default function MemoryGallery() {
           globals.css and --seam-arrival in CosmicAtmosphere.tsx. */}
       <span className="memories-arrival" aria-hidden="true" />
 
-      <div className="relative z-10 px-[max(1.5rem,env(safe-area-inset-left))] pt-32 pb-20 text-center sm:px-6">
-        <p className="type-meta" data-reveal="fade">
-          Chapter 05
-        </p>
-        <h2 id="memories-title" className="type-chapter mt-5" data-reveal="mask">
-          <span className="reveal-line">Memories suspended in time</span>
-        </h2>
-        <p className="type-emotion mx-auto mt-6 max-w-lg" data-reveal="fade">
-          Moments drift around us like photographs that never learned how to
-          fade.
-        </p>
-      </div>
+      {/* The heading stays for screen readers/document structure; visually
+          each photograph below now speaks for itself — image first, one
+          line second, per photo, rather than a gallery intro up top. */}
+      <h2 id="memories-title" className="sr-only">
+        Memories suspended in time
+      </h2>
+      <p className="sr-only">
+        Moments drift around us like photographs that never learned how to
+        fade.
+      </p>
 
       <div className="memory-sequence">
-        <EstablishingMemory memory={m1} index={0} reduced={reduced} />
-        <QuietMemory memory={m2} index={1} align="end" />
-        <IntimateMemory memory={m3} index={2} reduced={reduced} />
-        <HeroMemory memory={m4} index={3} capable={heroCapable} />
-        <QuietMemory memory={m5} index={4} align="center" resolution />
+        <EstablishingMemory memory={m1} reduced={reduced} />
+        <QuietMemory memory={m2} align="end" />
+        <IntimateMemory memory={m3} reduced={reduced} />
+        <HeroMemory memory={m4} capable={heroCapable} />
+        <QuietMemory memory={m5} align="center" resolution />
       </div>
     </section>
   );
@@ -91,14 +89,12 @@ export default function MemoryGallery() {
 
 type Memory = (typeof memories)[number];
 
-function MemoryMeta({ memory, index }: { memory: Memory; index: number }) {
-  return (
-    <p className="type-meta memory-meta">
-      {String(index + 1).padStart(2, "0")} / {String(memories.length).padStart(2, "0")}
-      <span aria-hidden="true" className="memory-meta__sep" />
-      {memory.place}
-    </p>
-  );
+// No `01 / 05` counter — these read in normal scroll order, not as a
+// slideshow, so a position counter has nothing to orient against; the
+// place name alone is the small line, matching the brief's exact
+// small/large structure (small: place, large: caption).
+function MemoryMeta({ memory }: { memory: Memory }) {
+  return <p className="type-meta memory-meta">{memory.place}</p>;
 }
 
 /**
@@ -112,11 +108,9 @@ function MemoryMeta({ memory, index }: { memory: Memory; index: number }) {
  */
 function EstablishingMemory({
   memory,
-  index,
   reduced,
 }: {
   memory: Memory;
-  index: number;
   reduced: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -175,10 +169,10 @@ function EstablishingMemory({
         />
       </div>
       <figcaption className="memory-shot__caption memory-shot__caption--centered" data-reveal="fade">
-        <MemoryMeta memory={memory} index={index} />
-        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
-        <p className="type-story mx-auto mt-2 max-w-sm">{memory.caption}</p>
-        <p className="type-story memory-shot__note mx-auto mt-2 max-w-sm">{memory.note}</p>
+        <MemoryMeta memory={memory} />
+        <h3 className="sr-only">{memory.title}</h3>
+        <p className="type-emotion memory-shot__title mx-auto mt-2 max-w-sm">{memory.caption}</p>
+        <p className="sr-only">{memory.note}</p>
       </figcaption>
     </figure>
   );
@@ -195,12 +189,10 @@ function EstablishingMemory({
  */
 function QuietMemory({
   memory,
-  index,
   align,
   resolution = false,
 }: {
   memory: Memory;
-  index: number;
   align: "end" | "center";
   resolution?: boolean;
 }) {
@@ -225,10 +217,10 @@ function QuietMemory({
         className={`memory-shot__caption memory-shot__caption--${align === "center" ? "centered" : "quiet"}`}
         data-reveal="fade"
       >
-        <MemoryMeta memory={memory} index={index} />
-        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
-        <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
-        <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+        <MemoryMeta memory={memory} />
+        <h3 className="sr-only">{memory.title}</h3>
+        <p className="type-emotion memory-shot__title mt-2 max-w-xs">{memory.caption}</p>
+        <p className="sr-only">{memory.note}</p>
       </figcaption>
     </figure>
   );
@@ -243,11 +235,9 @@ function QuietMemory({
  */
 function IntimateMemory({
   memory,
-  index,
   reduced,
 }: {
   memory: Memory;
-  index: number;
   reduced: boolean;
 }) {
   const photoRef = useRef<HTMLDivElement>(null);
@@ -302,10 +292,10 @@ function IntimateMemory({
         />
       </div>
       <figcaption className="memory-shot__caption memory-shot__caption--intimate" data-reveal="fade">
-        <MemoryMeta memory={memory} index={index} />
-        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
-        <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
-        <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+        <MemoryMeta memory={memory} />
+        <h3 className="sr-only">{memory.title}</h3>
+        <p className="type-emotion memory-shot__title mt-2 max-w-xs">{memory.caption}</p>
+        <p className="sr-only">{memory.note}</p>
       </figcaption>
     </figure>
   );
@@ -326,11 +316,9 @@ function IntimateMemory({
  */
 function HeroMemory({
   memory,
-  index,
   capable,
 }: {
   memory: Memory;
-  index: number;
   capable: boolean;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -388,10 +376,10 @@ function HeroMemory({
         />
         <div className="memory-shot__hero-gradient" aria-hidden="true" />
         <figcaption className="memory-shot__caption memory-shot__caption--hero">
-          <MemoryMeta memory={memory} index={index} />
-          <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
-          <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
-          <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+          <MemoryMeta memory={memory} />
+          <h3 className="sr-only">{memory.title}</h3>
+          <p className="type-emotion memory-shot__title mt-2 max-w-xs">{memory.caption}</p>
+          <p className="sr-only">{memory.note}</p>
         </figcaption>
       </div>
     </figure>

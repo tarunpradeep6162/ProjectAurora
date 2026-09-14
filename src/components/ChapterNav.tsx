@@ -2,6 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chapters, hiddenMessages } from "@/lib/content";
+
+/**
+ * Softer wayfinding labels for the nav panel's chapter list — the panel
+ * itself is the one place a slightly more descriptive list still belongs
+ * (it's a menu, not the page's primary visual presentation), but "Our
+ * Story" reads better here than the literal chapter titles used to drive
+ * document structure elsewhere.
+ */
+const NAV_LABELS: Record<string, string> = {
+  portal: "The Beginning",
+  miracle: "A Favourite Miracle",
+  story: "Our Story",
+  journey: "The Journey",
+  memories: "Memories",
+  letter: "My Letter",
+  birthday: "Your Wish",
+  finale: "Forever",
+};
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
 import { markMessageFound, useFoundMessages } from "@/components/HiddenMessages";
@@ -110,8 +128,8 @@ export default function ChapterNav() {
             <span className="block h-px w-full bg-current" />
             <span className="block h-px w-2/3 bg-current" />
           </span>
-          <span className="hidden sm:inline">Chapters</span>
-          <span className="sr-only sm:hidden">Chapters and accessibility</span>
+          <span className="hidden sm:inline">Our Story</span>
+          <span className="sr-only sm:hidden">Our Story and accessibility</span>
           <span aria-hidden="true" className="tabular-nums text-[rgba(200,168,106,0.8)]">
             {current.number}
             <span className="text-[rgba(221,211,197,0.62)]"> / {String(chapters.length).padStart(2, "0")}</span>
@@ -130,9 +148,9 @@ export default function ChapterNav() {
             aria-label="Chapter navigation and accessibility panel"
             className="nav-panel mt-2 max-h-[min(72svh,40rem)] w-[min(calc(100vw-2rem),23rem)] overflow-y-auto overscroll-contain rounded-[2px] border border-[rgba(215,185,122,0.2)] bg-[rgba(8,8,7,0.97)] p-4 sm:p-5"
           >
-            <h2 className="type-meta mb-2 px-2">Chapters</h2>
+            <h2 className="type-meta mb-2 px-2">Our Story</h2>
             <p className="type-story mb-3 px-2 text-[0.8125rem] leading-relaxed text-[rgba(221,211,197,0.6)]">
-              Jump to any chapter.
+              Find your way back to any moment.
             </p>
             <ol>
               {chapters.map((chapter, i) => (
@@ -147,11 +165,8 @@ export default function ChapterNav() {
                         : "border-transparent text-[rgba(221,211,197,0.78)] hover:bg-white/[0.03] hover:text-foreground"
                     }`}
                   >
-                    <span className="block text-[12px] tracking-[0.24em] opacity-80">
-                      {chapter.number}
-                    </span>
                     <span className="block font-display text-[1.05rem] leading-tight">
-                      {chapter.title}
+                      {NAV_LABELS[chapter.id] ?? chapter.title}
                     </span>
                     <span className="mt-0.5 block font-display text-[0.9rem] italic leading-snug opacity-80">
                       {chapter.subtitle}

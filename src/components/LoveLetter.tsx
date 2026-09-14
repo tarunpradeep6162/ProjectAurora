@@ -38,17 +38,17 @@ export default function LoveLetter() {
       <div aria-hidden="true" className="letter-hush" />
 
       <div className="relative z-10 mx-auto w-full max-w-[48rem] px-[max(1.5rem,env(safe-area-inset-left))] pt-[clamp(9rem,26svh,15rem)] pb-[clamp(7rem,20svh,12rem)] sm:px-10">
+        {/* One tiny label, not a heading-plus-subtitle pair — the reading
+            itself is the point. "A letter from my heart" and its subtitle
+            stay for screen readers and the document outline. */}
         <header className="text-center">
-          <p className="type-meta" data-reveal="fade">
-            Chapter 06
-          </p>
-          <h2 id="letter-title" className="type-chapter mt-5" data-reveal="mask">
-            <span className="reveal-line">A letter from my heart</span>
+          <h2 id="letter-title" className="sr-only">
+            A letter from my heart
           </h2>
-          <p
-            className="type-emotion mx-auto mt-6 max-w-[30rem]"
-            data-reveal="fade"
-          >
+          <p className="type-meta" data-reveal="fade">
+            A letter for you
+          </p>
+          <p className="sr-only">
             Some feelings deserve more than a message. They deserve a universe
             of their own.
           </p>

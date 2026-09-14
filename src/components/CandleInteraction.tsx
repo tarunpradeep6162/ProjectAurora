@@ -223,14 +223,18 @@ export default function CandleInteraction() {
         <span className="wish-star wish-star--two" />
       </div>
 
+      {/* Just her name — the candle itself carries "Make a wish" (see
+          `candle-prompt` below, already `birthdayCard.wishPrompt`), so the
+          header doesn't repeat it. Full heading/subtitle stay for screen
+          readers. */}
       <header className="candle-header">
-        <p className="type-meta" data-reveal="fade">
-          Chapter 07
-        </p>
-        <h2 id="birthday-title" className="type-chapter mt-5" data-reveal="mask">
-          <span className="reveal-line">Happy Birthday, Dheepika</span>
+        <h2 id="birthday-title" className="sr-only">
+          Happy Birthday, Dheepika
         </h2>
-        <p className="type-emotion mx-auto mt-5 max-w-[30rem]" data-reveal="fade">
+        <p className="type-meta" data-reveal="fade">
+          Dheepika
+        </p>
+        <p className="sr-only">
           May this new year of your life carry wonder, peace, laughter and all
           the love you deserve.
         </p>

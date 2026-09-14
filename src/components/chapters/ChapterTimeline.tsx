@@ -154,12 +154,17 @@ export default function ChapterTimeline() {
       className="relative flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-transparent px-[max(1.5rem,env(safe-area-inset-left))] py-32 sm:px-6"
     >
       <div className="relative z-10 mx-auto w-full max-w-2xl text-center">
-        <p className="type-meta" data-reveal="fade">
-          Chapter 03
-        </p>
-        <h2 id="story-title" className="type-chapter mt-5" data-reveal="mask">
-          <span className="reveal-line">Our story became a world</span>
+        {/* "Our story became a world" carries the section for screen readers
+            and the document outline; visually this chapter opens on the one
+            line that actually sounds spoken, not a heading-plus-subtitle
+            pair — the individual moments below already do the rest of the
+            storytelling one at a time. */}
+        <h2 id="story-title" className="sr-only">
+          Our story became a world
         </h2>
+        <p className="type-meta" data-reveal="fade">
+          Our story
+        </p>
         <p className="type-emotion mx-auto mt-6 max-w-lg" data-reveal="fade">
           Every conversation, every smile and every small moment left a light
           behind.
@@ -180,13 +185,23 @@ export default function ChapterTimeline() {
               data-reveal={skipPin ? "fade" : undefined}
               className={
                 skipPin
-                  ? "border-l border-[rgba(215,185,122,0.22)] pl-6"
+                  ? "flex flex-col items-center text-center"
                   : "absolute inset-0 flex flex-col items-center justify-center"
               }
             >
-              <p className="type-meta">{entry.number}</p>
-              <h3 className="type-chapter timeline-entry-title mt-2">{entry.title}</h3>
-              <p className="type-emotion mt-2 max-w-md">{entry.line}</p>
+              {/* Each moment keeps its own heading for the document
+                  outline/screen readers; visually the number+title collapse
+                  into one small line so the feeling below it, not the
+                  label, carries the weight. */}
+              <h3 className="sr-only">
+                {entry.number} — {entry.title}
+              </h3>
+              <p aria-hidden="true" className="type-meta">
+                {entry.number} — {entry.title}
+              </p>
+              <p className="type-chapter timeline-entry-title mt-3 max-w-md">
+                {entry.line}
+              </p>
             </li>
           ))}
         </ol>
