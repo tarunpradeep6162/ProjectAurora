@@ -12,62 +12,47 @@ import { useMotionEngineAlive } from "@/components/chapters/useMotionEngine";
 import { focusFor, photoFraming } from "@/components/chapters/photoFraming";
 
 /**
- * Chapter 5 — "Road of Memories". On a desktop the section pins for one
- * viewport-height per photograph; each fills the frame with its caption at
- * the bottom-left like a corner timestamp, and the next memory overtakes
- * the last with a slow horizontal drift.
+ * Chapter 5 — five real photographs, each its own shot rather than five
+ * identical panels. Previously this pinned the section and cross-faded five
+ * stacked, identically-framed panels; that assumed every photo was the same
+ * shape filling the same frame, which fought giving each memory its own
+ * composition. Dropped in favour of normal scroll flow — every memory reads
+ * in document order, at its own size, with its own kind of stillness or
+ * motion, chosen from what the photo and its words actually are:
  *
- * The crossfade is a `data-state` attribute with CSS transitions (never
- * inline `opacity: 0`, which MotionSafetyNet would force-reveal, stacking
- * all five photographs with the last one on top).
+ *   01  The Blue Himalayan          — establishing: wide, quiet recall-in
+ *   02  Travel With Your Soul       — a small frame adrift in dark space
+ *   03  Cold Morning, Warm Coffee   — intimate portrait, a focus pull
+ *   04  Somewhere We Got Lost       — the one moment allowed to fill the
+ *                                     screen (the chapter's single signature
+ *                                     expansion — see HeroMemory)
+ *   05  The One I Would Keep        — small and still again on purpose: its
+ *                                     own words call it the one she'd keep,
+ *                                     and it hands the chapter to the Letter
  *
- * On phones and other touch-first devices, with prefers-reduced-motion, or
- * whenever animation frames are
- * not verifiably being delivered, there is no pin: each photograph is its
- * own framed panel in normal scroll flow, cropped around the rider's face
- * (photoFraming.ts), with its caption fading in as it arrives.
+ * None of that is arbitrary — it follows the photos' own aspect ratios and
+ * what each caption already says (see the JOURNEY CINEMATOGRAPHY / MEMORIES
+ * commit history for the full reasoning). No image, caption, date or order
+ * was invented or changed; `content.ts` and `photoFraming.ts` are untouched.
+ *
+ * Chapter-wide cosmic dimming (dimmer stars, quieter glow) and the warm
+ * hand-off from Chapter 04 (`.memories-arrival`, `--seam-arrival`) already
+ * existed before this pass and are unchanged.
  */
 export default function MemoryGallery() {
   const root = useRef<HTMLElement>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const narrow = useNarrowViewport();
-  // Touch-first devices of any width (a phone held landscape, a tablet).
   const coarsePointer = useCoarsePointer();
   const engineAlive = useMotionEngineAlive();
-  const skipPin = reduced || narrow || coarsePointer || !engineAlive;
+  // The one pinned, expanding shot (Memory 04) needs real, verified frames
+  // and a fine pointer to ever feel like a "premium expansion" rather than a
+  // jump; anywhere that isn't true it simply renders large and static.
+  const heroCapable = !reduced && !narrow && !coarsePointer && engineAlive;
 
   useInViewReveal(root);
 
-  useGSAP(
-    () => {
-      if (skipPin) return;
-      const panels = gsap.utils.toArray<HTMLElement>("[data-memory-panel]");
-      if (panels.length === 0) return;
-
-      const st = ScrollTrigger.create({
-        trigger: frameRef.current,
-        start: "top top",
-        end: `+=${panels.length * 100}%`,
-        pin: true,
-        scrub: 0.6,
-        onUpdate: (self) => {
-          const idx = Math.min(
-            panels.length - 1,
-            Math.floor(self.progress * panels.length)
-          );
-          panels.forEach((panel, i) => {
-            const state = i === idx ? "active" : i < idx ? "past" : "future";
-            if (panel.dataset.state !== state) panel.dataset.state = state;
-          });
-        },
-      });
-
-      ScrollTrigger.refresh();
-      return () => st.kill();
-    },
-    { scope: root, dependencies: [skipPin], revertOnUpdate: true }
-  );
+  const [m1, m2, m3, m4, m5] = memories;
 
   return (
     <section
@@ -80,7 +65,7 @@ export default function MemoryGallery() {
           globals.css and --seam-arrival in CosmicAtmosphere.tsx. */}
       <span className="memories-arrival" aria-hidden="true" />
 
-      <div className="relative z-10 px-[max(1.5rem,env(safe-area-inset-left))] pt-32 pb-16 text-center sm:px-6">
+      <div className="relative z-10 px-[max(1.5rem,env(safe-area-inset-left))] pt-32 pb-20 text-center sm:px-6">
         <p className="type-meta" data-reveal="fade">
           Chapter 05
         </p>
@@ -93,64 +78,322 @@ export default function MemoryGallery() {
         </p>
       </div>
 
-      {/* In pinned mode all five photographs stack in the same region and
-          only one is visible at a time; that layering has no reliable
-          meaning for assistive tech, so the captions are also given here as
-          a plain, always-present list. */}
-      {!skipPin && (
-        <ul className="sr-only">
-          {memories.map((memory) => (
-            <li key={memory.id}>
-              {memory.title}, {memory.place}. {memory.caption} {memory.note}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div
-        ref={frameRef}
-        aria-hidden={skipPin ? undefined : true}
-        className={
-          skipPin
-            ? "memory-flow"
-            : "memory-stage relative h-svh w-full overflow-hidden"
-        }
-      >
-        {memories.map((memory, i) => (
-          <figure
-            key={memory.id}
-            data-memory-panel
-            data-state={skipPin ? undefined : i === 0 ? "active" : "future"}
-            className={skipPin ? "memory-panel" : "memory-panel memory-panel--stacked"}
-          >
-            <div className="memory-panel__photo">
-              <Image
-                src={memory.src}
-                alt={photoFraming[memory.id]?.alt ?? ""}
-                width={memory.width}
-                height={memory.height}
-                sizes="100vw"
-                className="h-full w-full object-cover"
-                style={{ objectPosition: focusFor(memory.id) }}
-              />
-            </div>
-
-            <figcaption
-              className="memory-panel__caption"
-              data-reveal={skipPin ? "fade" : undefined}
-            >
-              <p className="type-meta">
-                {String(i + 1).padStart(2, "0")} / {String(memories.length).padStart(2, "0")}
-                <span aria-hidden="true" className="memory-panel__sep" />
-                {memory.place}
-              </p>
-              <h3 className="type-emotion memory-panel__title">{memory.title}</h3>
-              <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
-              <p className="type-story memory-panel__note max-w-xs">{memory.note}</p>
-            </figcaption>
-          </figure>
-        ))}
+      <div className="memory-sequence">
+        <EstablishingMemory memory={m1} index={0} reduced={reduced} />
+        <QuietMemory memory={m2} index={1} align="end" />
+        <IntimateMemory memory={m3} index={2} reduced={reduced} />
+        <HeroMemory memory={m4} index={3} capable={heroCapable} />
+        <QuietMemory memory={m5} index={4} align="center" resolution />
       </div>
     </section>
+  );
+}
+
+type Memory = (typeof memories)[number];
+
+function MemoryMeta({ memory, index }: { memory: Memory; index: number }) {
+  return (
+    <p className="type-meta memory-meta">
+      {String(index + 1).padStart(2, "0")} / {String(memories.length).padStart(2, "0")}
+      <span aria-hidden="true" className="memory-meta__sep" />
+      {memory.place}
+    </p>
+  );
+}
+
+/**
+ * Memory 01 — establishing. Wide, centred, a great deal of quiet air above
+ * and below it. Arrives with the "remembering" treatment the brief asks
+ * for: a little soft, a little close, a little dim, resolving to sharp,
+ * true size and normal exposure — like a memory coming into focus rather
+ * than a slide simply fading in. One-shot (`toggleActions`), never a scrub:
+ * it plays once as the visitor arrives and never seesaws if they scroll
+ * back over it.
+ */
+function EstablishingMemory({
+  memory,
+  index,
+  reduced,
+}: {
+  memory: Memory;
+  index: number;
+  reduced: boolean;
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (reduced || !frameRef.current) return;
+      const tween = gsap.fromTo(
+        frameRef.current,
+        { opacity: 0, scale: 1.025, filter: "blur(8px) brightness(0.82)" },
+        {
+          opacity: 1,
+          scale: 1,
+          filter: "blur(0px) brightness(1)",
+          duration: 1.8,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: frameRef.current,
+            start: "top 82%",
+            end: "top 45%",
+            toggleActions: "play none none reverse",
+          },
+        }
+      );
+      // A stalled frame loop must not leave the very first photograph stuck
+      // at opacity 0 — MotionSafetyNet would eventually force it visible,
+      // but a photograph should never wait 3.5s for a global sweep when a
+      // few extra lines here can just finish its own reveal on time.
+      const failsafe = window.setTimeout(() => {
+        if (tween.progress() < 1) tween.progress(1);
+      }, 3200);
+      return () => {
+        window.clearTimeout(failsafe);
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      };
+    },
+    { dependencies: [reduced], revertOnUpdate: true }
+  );
+
+  return (
+    <figure className="memory-shot memory-shot--establishing">
+      <div
+        ref={frameRef}
+        className="memory-shot__frame memory-shot__frame--wide"
+        style={reduced ? undefined : { opacity: 0 }}
+      >
+        <Image
+          src={memory.src}
+          alt={photoFraming[memory.id]?.alt ?? ""}
+          width={memory.width}
+          height={memory.height}
+          sizes="(min-width: 1024px) 64rem, 92vw"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: focusFor(memory.id) }}
+        />
+      </div>
+      <figcaption className="memory-shot__caption memory-shot__caption--centered" data-reveal="fade">
+        <MemoryMeta memory={memory} index={index} />
+        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
+        <p className="type-story mx-auto mt-2 max-w-sm">{memory.caption}</p>
+        <p className="type-story memory-shot__note mx-auto mt-2 max-w-sm">{memory.note}</p>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * A small photograph adrift in a great deal of dark — used twice, at
+ * opposite emotional moments: Memory 02 (a quiet beat between the opener
+ * and the portrait) sits off to one side; Memory 05 (`resolution`) sits
+ * centred and is given extra space below it, since its own words call it
+ * the one she'd keep and it is the last thing before the Letter. Motion is
+ * the shared, ordinary fade every other quiet element on this site already
+ * uses — nothing bespoke, on purpose.
+ */
+function QuietMemory({
+  memory,
+  index,
+  align,
+  resolution = false,
+}: {
+  memory: Memory;
+  index: number;
+  align: "end" | "center";
+  resolution?: boolean;
+}) {
+  return (
+    <figure
+      className={`memory-shot memory-shot--quiet memory-shot--${align}${
+        resolution ? " memory-shot--resolution" : ""
+      }`}
+    >
+      <div className="memory-shot__frame memory-shot__frame--small" data-reveal="fade">
+        <Image
+          src={memory.src}
+          alt={photoFraming[memory.id]?.alt ?? ""}
+          width={memory.width}
+          height={memory.height}
+          sizes="(min-width: 768px) 26rem, 74vw"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: focusFor(memory.id) }}
+        />
+      </div>
+      <figcaption
+        className={`memory-shot__caption memory-shot__caption--${align === "center" ? "centered" : "quiet"}`}
+        data-reveal="fade"
+      >
+        <MemoryMeta memory={memory} index={index} />
+        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
+        <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
+        <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Memory 03 — an intimate portrait, off-axis, with the caption resting in
+ * the negative space beside it rather than over it. Carries this chapter's
+ * one focus-pull: the photo itself starts a little soft and sharpens as it
+ * arrives, so attention settles onto it rather than the words that were
+ * already legible. One-shot, same as the establishing shot.
+ */
+function IntimateMemory({
+  memory,
+  index,
+  reduced,
+}: {
+  memory: Memory;
+  index: number;
+  reduced: boolean;
+}) {
+  const photoRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (reduced || !photoRef.current) return;
+      const tween = gsap.fromTo(
+        photoRef.current,
+        { filter: "blur(5px)" },
+        {
+          filter: "blur(0px)",
+          duration: 1.4,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: photoRef.current,
+            start: "top 80%",
+            end: "top 50%",
+            toggleActions: "play none none reverse",
+          },
+        }
+      );
+      // Same reasoning as the establishing shot's failsafe: a photograph
+      // should not stay soft-focus indefinitely if the frame loop stalls.
+      const failsafe = window.setTimeout(() => {
+        if (tween.progress() < 1) tween.progress(1);
+      }, 2800);
+      return () => {
+        window.clearTimeout(failsafe);
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      };
+    },
+    { dependencies: [reduced], revertOnUpdate: true }
+  );
+
+  return (
+    <figure className="memory-shot memory-shot--intimate">
+      <div
+        ref={photoRef}
+        className="memory-shot__frame memory-shot__frame--portrait"
+        data-reveal="fade"
+      >
+        <Image
+          src={memory.src}
+          alt={photoFraming[memory.id]?.alt ?? ""}
+          width={memory.width}
+          height={memory.height}
+          sizes="(min-width: 768px) 28rem, 84vw"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: focusFor(memory.id) }}
+        />
+      </div>
+      <figcaption className="memory-shot__caption memory-shot__caption--intimate" data-reveal="fade">
+        <MemoryMeta memory={memory} index={index} />
+        <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
+        <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
+        <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Memory 04 — this chapter's one signature moment: a contained frame that
+ * expands toward full-bleed as the visitor scrolls through it, then gives
+ * way to the next, quieter memory. Pinned only where a fine pointer and
+ * verified frames make that feel premium rather than janky; everywhere else
+ * it simply renders large and still — the strongest photo on the page
+ * either way, just not the one moving one.
+ *
+ * Expansion is done entirely with `clip-path` (a compositor-friendly
+ * property) on a frame that is already full-bleed-sized underneath, rather
+ * than animating `width`/`height` — same visual result, none of the layout
+ * cost.
+ */
+function HeroMemory({
+  memory,
+  index,
+  capable,
+}: {
+  memory: Memory;
+  index: number;
+  capable: boolean;
+}) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!capable || !sectionRef.current || !frameRef.current) return;
+      const st = ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top top",
+        end: "+=70%",
+        pin: true,
+        scrub: 0.6,
+        onUpdate: (self) => {
+          // 15% inset (a contained frame with room around it) easing to 0
+          // (full-bleed). Radius shrinks with it, so the contained frame
+          // reads as a photograph and the expanded one as the screen itself.
+          const inset = 15 * (1 - self.progress);
+          const radius = 18 * (1 - self.progress);
+          frameRef.current!.style.clipPath =
+            `inset(${inset}% ${inset}% ${inset}% ${inset}% round ${radius}px)`;
+        },
+      });
+      // The four memories above this one (and everything below it, all the
+      // way to the Letter) can still be settling their own layout the first
+      // time this runs — a pin created against a stale document height is
+      // exactly what leaves the next memory's spacer too short and the two
+      // overlapping. Same fix ChapterTimeline's own pin already uses.
+      ScrollTrigger.refresh();
+      return () => st.kill();
+    },
+    { dependencies: [capable], revertOnUpdate: true }
+  );
+
+  return (
+    <figure
+      ref={sectionRef}
+      className={`memory-shot memory-shot--hero${capable ? "" : " memory-shot--hero-static"}`}
+    >
+      <div
+        ref={frameRef}
+        className="memory-shot__frame memory-shot__frame--hero"
+        data-reveal={capable ? undefined : "fade"}
+        style={capable ? { clipPath: "inset(15% 15% 15% 15% round 18px)" } : undefined}
+      >
+        <Image
+          src={memory.src}
+          alt={photoFraming[memory.id]?.alt ?? ""}
+          width={memory.width}
+          height={memory.height}
+          sizes="100vw"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: focusFor(memory.id) }}
+        />
+        <div className="memory-shot__hero-gradient" aria-hidden="true" />
+        <figcaption className="memory-shot__caption memory-shot__caption--hero">
+          <MemoryMeta memory={memory} index={index} />
+          <h3 className="type-emotion memory-shot__title mt-2">{memory.title}</h3>
+          <p className="type-story mt-2 max-w-xs">{memory.caption}</p>
+          <p className="type-story memory-shot__note mt-2 max-w-xs">{memory.note}</p>
+        </figcaption>
+      </div>
+    </figure>
   );
 }
