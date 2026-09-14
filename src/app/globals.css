@@ -2148,6 +2148,73 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
+/* The signature Journey shot: the last of the three ghost photographs
+   (memory-5, "the one I would keep") doesn't just fade like the other two —
+   it dissolves. The same radial mask that vignettes every ghost is driven
+   inward by --dissolve (1 -> 0) as the photo's hold ends, so the image
+   visually collapses toward its own centre rather than simply fading in
+   place, and the small "ember" points in .journey-embers (each an
+   independent point-of-light, the same visual language as the site's other
+   hidden/wish stars) scatter outward from that same centre exactly as the
+   photo finishes dissolving — the photograph becoming the points that carry
+   forward into the constellation next. Pure CSS/GSAP, no new rendering
+   system: the mask math and the star-point styling both already exist
+   elsewhere in this file, just recombined here with one new variable. */
+.journey-ghost--signature {
+  width: min(46vw, 30rem);
+  height: min(46vw, 30rem);
+  -webkit-mask-image: radial-gradient(
+    ellipse calc(58% * var(--dissolve, 1)) calc(58% * var(--dissolve, 1)) at 50% 50%,
+    #000 22%,
+    transparent 76%
+  );
+  mask-image: radial-gradient(
+    ellipse calc(58% * var(--dissolve, 1)) calc(58% * var(--dissolve, 1)) at 50% 50%,
+    #000 22%,
+    transparent 76%
+  );
+}
+
+.journey-embers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.journey-ember {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--accent-soft);
+  box-shadow: 0 0 4px rgba(215, 185, 122, 0.7);
+  opacity: 0;
+  /* --ex/--ey: each ember's own resting offset from centre, in a small
+     radius — set inline per point so they scatter in different directions
+     rather than as one uniform ring. --spread (0 -> 1) is what GSAP drives:
+     at 0 every ember sits exactly at the dissolving photo's centre; at 1
+     each has travelled out to its own (--ex, --ey). */
+  transform: translate3d(
+    calc(-50% + var(--ex, 0px) * var(--spread, 0)),
+    calc(-50% + var(--ey, 0px) * var(--spread, 0)),
+    0
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-ghost--signature {
+    -webkit-mask-image: radial-gradient(ellipse 58% 58% at 50% 50%, #000 22%, transparent 76%);
+    mask-image: radial-gradient(ellipse 58% 58% at 50% 50%, #000 22%, transparent 76%);
+  }
+  .journey-embers {
+    display: none;
+  }
+}
+
 /* Chapter 02's photograph: its resting grade, and the overexposed state it
    emerges from at the end of the entry warp. */
 .miracle-photo {

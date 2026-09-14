@@ -25,6 +25,25 @@ const GHOST_IDS = ["memory-4", "memory-1", "memory-5"];
 const ghosts = GHOST_IDS.map((id) => memories.find((m) => m.id === id)).filter(
   (m): m is (typeof memories)[number] => Boolean(m)
 );
+// The last ghost (memory-5 — "the one I would keep") is this chapter's
+// signature shot: it dissolves instead of just fading, scattering into the
+// small ember points below. Index into `ghosts`, not `GHOST_IDS`, in case a
+// future edit ever changes which id is last.
+const SIGNATURE_INDEX = ghosts.length - 1;
+
+// Fixed, hand-placed scatter offsets (px) rather than randomized at
+// render/mount — this is a small, one-time decorative burst, not a system
+// that needs runtime variety, and a literal array keeps it reproducible
+// (the same pattern CONSTELLATION_POINTS/CONSTELLATION_CONTROLS already use
+// elsewhere in this project for exactly this reason).
+const EMBER_OFFSETS: readonly [number, number][] = [
+  [22, -38],
+  [-30, -20],
+  [34, 14],
+  [-16, 34],
+  [10, -52],
+  [-36, 24],
+];
 
 /**
  * Chapter 4. The path draws itself as the visitor scrolls through, over the
@@ -84,11 +103,41 @@ export default function ChapterJourney() {
       const ghostEls = gsap.utils.toArray<HTMLElement>("[data-journey-ghost]");
       ghostEls.forEach((el, i) => {
         const start = 0.08 + i * 0.24;
+        const isSignature = el.hasAttribute("data-signature");
         gsap.set(el, { opacity: 0, scale: 1.04 });
-        tl.to(el, { opacity: 0.14, scale: 1, ease: "sine.out", duration: 0.18 }, start)
-          .to(el, { opacity: 0.14, duration: 0.1 }, start + 0.18)
-          .to(el, { opacity: 0, scale: 0.98, ease: "sine.in", duration: 0.16 }, start + 0.28);
+        if (isSignature) gsap.set(el, { "--dissolve": 1 });
+        tl.to(el, { opacity: 0.16, scale: 1, ease: "sine.out", duration: 0.18 }, start)
+          .to(el, { opacity: 0.16, duration: 0.1 }, start + 0.18);
+
+        if (isSignature) {
+          // The signature shot dissolves rather than simply fading — mask
+          // radius collapses to the centre while the embers (below) scatter
+          // outward from that same point. Same [start+0.28, start+0.44]
+          // envelope every other ghost's plain fade-out uses (which, for the
+          // last ghost, is exactly [0.84, 1.00] — the timeline's own end),
+          // so the dissolve+scatter is guaranteed to finish exactly when the
+          // chapter does, never spilling past scroll progress 1.
+          tl.to(el, { "--dissolve": 0, ease: "sine.in", duration: 0.16 }, start + 0.28)
+            .to(el, { opacity: 0, duration: 0.16 }, start + 0.28);
+        } else {
+          tl.to(el, { opacity: 0, scale: 0.98, ease: "sine.in", duration: 0.16 }, start + 0.28);
+        }
       });
+
+      const emberEls = gsap.utils.toArray<HTMLElement>("[data-journey-ember]");
+      if (emberEls.length > 0) {
+        const signatureStart = 0.08 + SIGNATURE_INDEX * 0.24; // matches the signature ghost's own start
+        const dissolveStart = signatureStart + 0.28; // 0.84 — the same instant the mask starts collapsing
+        gsap.set(emberEls, { opacity: 0, "--spread": 0 });
+        // Emerge just as the dissolve begins, scattered outward by 0.08,
+        // hold a beat, then fade — the whole thing landing at exactly 1.0,
+        // the last instant this scrubbed timeline ever reaches.
+        tl.to(
+          emberEls,
+          { opacity: 1, "--spread": 1, ease: "sine.out", duration: 0.08, stagger: 0.008 },
+          dissolveStart
+        ).to(emberEls, { opacity: 0, ease: "sine.in", duration: 0.08 }, dissolveStart + 0.08);
+      }
     },
     { scope: root, dependencies: [reduced], revertOnUpdate: true }
   );
@@ -107,24 +156,41 @@ export default function ChapterJourney() {
       <CosmicPath />
 
       <div aria-hidden="true" className="journey-ghosts">
-        {ghosts.map((memory, i) => (
-          <div
-            key={memory.id}
-            data-journey-ghost
-            data-motion-exempt
-            className="journey-ghost"
-            style={{ "--i": i } as React.CSSProperties}
-          >
-            <Image
-              src={memory.src}
-              alt=""
-              fill
-              sizes="40vw"
-              className="journey-ghost__img"
-              style={{ objectPosition: focusFor(memory.id) }}
-            />
-          </div>
-        ))}
+        {ghosts.map((memory, i) => {
+          const isSignature = i === SIGNATURE_INDEX;
+          return (
+            <div
+              key={memory.id}
+              data-journey-ghost
+              data-signature={isSignature ? "" : undefined}
+              data-motion-exempt
+              className={`journey-ghost${isSignature ? " journey-ghost--signature" : ""}`}
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              <Image
+                src={memory.src}
+                alt=""
+                fill
+                sizes="40vw"
+                className="journey-ghost__img"
+                style={{ objectPosition: focusFor(memory.id) }}
+              />
+              {isSignature && (
+                <div className="journey-embers">
+                  {EMBER_OFFSETS.map(([ex, ey], j) => (
+                    <span
+                      key={j}
+                      data-journey-ember
+                      data-motion-exempt
+                      className="journey-ember"
+                      style={{ "--ex": `${ex}px`, "--ey": `${ey}px` } as React.CSSProperties}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div ref={copyRef} className="relative z-10 mx-auto w-full max-w-2xl text-center">
