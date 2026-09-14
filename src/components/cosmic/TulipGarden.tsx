@@ -55,8 +55,12 @@ function seededRandom(seed: number): () => number {
 const NEAR_Z = 8.0;
 const FAR_Z = 6.2;
 
-const DESKTOP_COUNT = 90;
-const MOBILE_COUNT = 34;
+// Raised from 90/34 — confirmed live the garden read as sparse rather
+// than "covering the page." Instancing keeps this cheap regardless (one
+// draw call per mesh type no matter the count): 130 flowers is still only
+// 130 stems + up to 260 leaves + 780 petals.
+const DESKTOP_COUNT = 130;
+const MOBILE_COUNT = 46;
 
 // Mostly pink/rose/peach/cream/yellow, less red/orange, rare magenta —
 // weighted by repetition rather than a separate probability table, so the
@@ -155,26 +159,58 @@ function buildLeafShape(): THREE.Shape {
   return shape;
 }
 
+/**
+ * `buildLeafShape()` on its own produces a perfectly flat `ShapeGeometry`
+ * — every vertex shares one normal. Confirmed live and rejected: next to
+ * the garden's own point lights, a flat plane like that catches specular
+ * reflection uniformly across its whole surface and reads as one blown-out
+ * bright shape (the "folded gold paper" the user flagged), not a green
+ * leaf with any natural shading. Bends the geometry out of plane once here
+ * — more curl toward the tip, a slight channel across the width, like a
+ * real blade — then recomputes normals so lighting actually varies across
+ * the surface the way it does on the (already-curved) petals.
+ */
+function buildLeafGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.ShapeGeometry(buildLeafShape(), 8);
+  const pos = geo.attributes.position;
+  let maxY = 0;
+  for (let i = 0; i < pos.count; i++) maxY = Math.max(maxY, pos.getY(i));
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const t = Math.max(0, y / Math.max(1e-6, maxY));
+    const bend = 0.05 * Math.pow(t, 1.6);
+    const channel = -0.16 * x * x;
+    pos.setZ(i, bend + channel);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
   const rand = seededRandom(SEED + count);
   const flowers: FlowerDatum[] = [];
 
-  // Cluster centers, not a grid — a handful of denser patches with open
-  // space between them. Biased right/center on desktop so the left side
-  // stays clear for "FOR DHEEPIKA / PROJECT AURORA"; a narrower spread on
-  // mobile, the same lesson the Relic's own x-offset already taught this
-  // project (a desktop-tuned horizontal offset sits entirely outside a
-  // portrait phone's much tighter horizontal FOV).
-  const clusterCount = 5;
+  // Cluster centers, not a grid — denser patches with open space between
+  // them, not empty rows. Widened and made denser from an earlier pass —
+  // confirmed live the garden read as sparse, concentrated on the right
+  // edge rather than filling the frame. Still a little lighter toward the
+  // far left (the hero's typography still needs its own space), but no
+  // longer excludes most of the page — a narrower spread on mobile, the
+  // same lesson the Relic's own x-offset already taught this project (a
+  // desktop-tuned horizontal offset sits entirely outside a portrait
+  // phone's much tighter horizontal FOV).
+  const clusterCount = 8;
   const clusters: { x: number; y: number; z: number; r: number }[] = [];
   for (let c = 0; c < clusterCount; c++) {
-    const xBase = mobileTier ? 0.15 : 0.55;
-    const xSpread = mobileTier ? 0.55 : 1.1;
+    const xBase = mobileTier ? 0.1 : 0.32;
+    const xSpread = mobileTier ? 0.85 : 1.65;
     clusters.push({
-      x: xBase + (rand() - 0.35) * xSpread,
+      x: xBase + (rand() - 0.4) * xSpread,
       y: -0.55 + (rand() - 0.5) * 0.7,
       z: FAR_Z + rand() * (NEAR_Z - FAR_Z),
-      r: 0.45 + rand() * 0.55,
+      r: 0.5 + rand() * 0.6,
     });
   }
 
@@ -186,8 +222,14 @@ function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
     const z = THREE.MathUtils.clamp(cluster.z + (rand() - 0.5) * 0.5, FAR_Z, NEAR_Z);
     const depthFactor = (z - FAR_Z) / (NEAR_Z - FAR_Z);
     // A handful of near instances get a real foreground boost — "3-6
-    // larger foreground elements, some partially outside the viewport".
-    const foreground = depthFactor > 0.82 && rand() < 0.3;
+    // larger foreground elements, some partially outside the viewport" —
+    // but gated to the right/center, never far left: widening the cluster
+    // spread for fuller page coverage meant a large foreground bloom could
+    // land directly over "FOR DHEEPIKA / PROJECT AURORA", confirmed live.
+    // The far-left band stays populated (for coverage) but with smaller,
+    // calmer flowers only.
+    const foreground = depthFactor > 0.82 && rand() < 0.3 && x > 0.25;
+    const textSafeDamping = x < 0.05 ? 0.55 : 1;
 
     // Calibrated against the project's own human-scale convention
     // (TarunRunner/CoupleModel target 1.7 units = a person's height) — a
@@ -199,7 +241,7 @@ function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
     const y = cluster.y + Math.sin(angle) * radius * 0.3 + (rand() - 0.5) * 0.15;
 
     const scaleJitter = 0.8 + rand() * 0.5;
-    const scale = (foreground ? 1.15 : 0.45 + depthFactor * 0.55) * scaleJitter;
+    const scale = (foreground ? 1.15 : 0.45 + depthFactor * 0.55) * scaleJitter * textSafeDamping;
 
     const color = PALETTE[Math.floor(rand() * PALETTE.length)].clone();
     // Far flowers desaturate and darken into the atmosphere rather than
@@ -238,7 +280,7 @@ function GardenMeshes({
   flowers: FlowerDatum[];
 }) {
   const stemGeo = useMemo(() => new THREE.CylinderGeometry(0.006, 0.012, 1, 6, 1), []);
-  const leafGeo = useMemo(() => new THREE.ShapeGeometry(buildLeafShape(), 8), []);
+  const leafGeo = useMemo(() => buildLeafGeometry(), []);
   const petalGeo = useMemo(() => buildPetalGeometry(), []);
 
   useEffect(() => {
@@ -436,7 +478,10 @@ function GardenMeshes({
           stemLean * 0.5
         );
         quaternion.setFromEuler(euler);
-        scaleVec.setScalar(f.scale * (1.1 + f.depthFactor * 0.25));
+        // Halved from an earlier pass — leaves were reading as large as or
+        // larger than the flowers themselves, overpowering them. Leaves
+        // are a supporting element here, not the visual focus.
+        scaleVec.setScalar(f.scale * (0.55 + f.depthFactor * 0.12));
         matrix.compose(position, quaternion, scaleVec);
         leaf.setMatrixAt(leafIndex, matrix);
         leafIndex++;
@@ -451,7 +496,9 @@ function GardenMeshes({
     const leafMat = leaf.material as THREE.MeshStandardMaterial;
     const petalMat = petal.material as THREE.MeshPhysicalMaterial;
     stemMat.opacity = reveal;
-    leafMat.opacity = reveal;
+    // Leaves recede behind the flowers rather than competing with them —
+    // never fully opaque even at full reveal.
+    leafMat.opacity = reveal * 0.6;
     petalMat.opacity = reveal;
 
     if (keyRef.current) keyRef.current.intensity = correction.keyIntensity * reveal;
@@ -472,9 +519,13 @@ function GardenMeshes({
         <meshStandardMaterial color={STEM_GREEN} roughness={0.55} metalness={0} transparent opacity={0} />
       </instancedMesh>
       <instancedMesh ref={leafRef} args={[leafGeo, undefined, leafInstanceCount]} frustumCulled={false}>
+        {/* Roughness raised from 0.5 — even with the geometry itself now
+            curved (see buildLeafGeometry), a lower roughness still let
+            the point lights catch a hard, unnaturally uniform highlight
+            across a thin blade at close range. */}
         <meshStandardMaterial
           color={LEAF_GREEN}
-          roughness={0.5}
+          roughness={0.85}
           metalness={0}
           side={THREE.DoubleSide}
           transparent
