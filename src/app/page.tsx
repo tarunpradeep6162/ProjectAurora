@@ -23,9 +23,12 @@ export default function Home() {
         <ChapterPortal />
         <ChapterMiracle />
         {/* Chapters 03-05 (story/journey/memories) merged into one chapter
-            — see content.ts and ChapterStory.tsx. ChapterTimeline.tsx,
-            ChapterJourney.tsx and MemoryGallery.tsx are kept on disk,
-            unmounted, the same precedent AuroraRelic.tsx already set. */}
+            — see content.ts and ChapterStory.tsx. The three DOM components
+            it replaced (ChapterTimeline.tsx, ChapterJourney.tsx,
+            MemoryGallery.tsx) and CosmicPath.tsx, which only they used,
+            have been deleted rather than kept unmounted — unlike
+            AuroraRelic.tsx, none of them had a plausible future use once
+            their content had a real successor. */}
         <ChapterStory />
         <LoveLetter />
         <CandleInteraction />

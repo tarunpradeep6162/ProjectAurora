@@ -24,10 +24,9 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 // (at the old "memories" boundary) are gone: chapters 03-05 merged into one
 // "story" chapter (content.ts) whose carousel now carries those transitions
 // internally, card to card, rather than as a hard boundary between DOM
-// sections — the CSS/DOM pieces that read them (ChapterTimeline.tsx's
-// constellation, MemoryGallery.tsx's `.memories-arrival`) are retired the
-// same way. Both are kept on disk, unmounted, should a future pass want
-// them back.
+// sections — the DOM pieces that read them (ChapterTimeline.tsx's
+// constellation, MemoryGallery.tsx's `.memories-arrival`) have been deleted
+// along with the rest of those two files.
 const SEAMS = [
   // Merged chapter 03 (story) into chapter 04 (the letter): motion slows,
   // the sky dims, the background warms, and the letter emerges — the

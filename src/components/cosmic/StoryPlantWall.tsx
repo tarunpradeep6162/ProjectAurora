@@ -38,13 +38,17 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  * Positioned dynamically every frame from the live camera (`camera.
  * getWorldDirection` + `camera.position`), not a hand-picked static world
  * coordinate: the site's camera arc (CAMERA_KEYS in CosmicScene.tsx) is a
- * continuously-evaluated spline, not a fixed pose per chapter, so "centre
- * straight ahead of camera" has to be computed live to actually stay
- * centred and straight rather than only being correct at one scroll
- * position. `group.lookAt(camera.position)` every frame keeps its flat
- * face turned toward the viewer the same way. A slow idle turn plus real
- * scroll-scrubbed rotation on top means it also visibly turns further
- * with every phase, so no single angle of it is ever "the" view.
+ * continuously-evaluated spline, not a fixed pose per chapter, so staying
+ * in frame has to be computed live rather than only being correct at one
+ * scroll position. Originally dead-centre; moved off to one side
+ * (`SIDE_OFFSET`, along the camera's own right vector) once this chapter
+ * also gained StoryCarousel.tsx, which needs the straight-ahead spot for
+ * itself — this wall is now the carousel's supporting scenery, a real
+ * garden growing at the edge of the scene, not a second object competing
+ * for the same one. `group.lookAt(camera.position)` every frame keeps its
+ * flat face turned toward the viewer regardless. A slow idle turn plus
+ * real scroll-scrubbed rotation on top means it also visibly turns
+ * further with every phase, so no single angle of it is ever "the" view.
  *
  * Built from the same primitives as the rest of this scene: two
  * `InstancedMesh` leaf shapes (a slender fern blade and a rounder broad
@@ -71,6 +75,10 @@ const WALL_WIDTH = 1.15;
 const WALL_HEIGHT = 1.95;
 const BOX_HEIGHT = 0.3;
 const DISTANCE_AHEAD = 3.1;
+// How far right of dead-centre the wall sits — enough to clear
+// StoryCarousel.tsx's own ring (radius ~2, straight ahead), not so far it
+// falls outside frame at this chapter's typical field of view.
+const SIDE_OFFSET = 1.7;
 
 function buildFernShape(): THREE.Shape {
   const shape = new THREE.Shape();
@@ -318,6 +326,7 @@ export default function StoryPlantWall({
   const euler = useMemo(() => new THREE.Euler(), []);
   const scaleVec = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
+  const right = useMemo(() => new THREE.Vector3(), []);
   const anchor = useMemo(() => new THREE.Vector3(), []);
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
@@ -367,14 +376,27 @@ export default function StoryPlantWall({
     spinRef.current = scrollSpin;
 
     camera.getWorldDirection(forward);
-    anchor.copy(camera.position).addScaledVector(forward, DISTANCE_AHEAD);
+    // Off to one side now, not dead-centre: this chapter also has
+    // StoryCarousel.tsx, which needs the straight-ahead position for
+    // itself. Same camera-relative technique, offset sideways along the
+    // camera's own right vector so the wall reads as a real plant growing
+    // at the edge of the scene the carousel is staged in, not a second
+    // object competing for the same spot.
+    right.crossVectors(forward, camera.up).normalize();
+    anchor
+      .copy(camera.position)
+      .addScaledVector(forward, DISTANCE_AHEAD)
+      .addScaledVector(right, SIDE_OFFSET);
     group.position.copy(anchor);
     lookTarget.copy(camera.position);
     group.lookAt(lookTarget);
     group.rotateY(idleSpin + scrollSpin);
 
     if (keyRef.current) {
-      keyRef.current.position.copy(camera.position).addScaledVector(forward, DISTANCE_AHEAD * 0.55);
+      keyRef.current.position
+        .copy(camera.position)
+        .addScaledVector(forward, DISTANCE_AHEAD * 0.55)
+        .addScaledVector(right, SIDE_OFFSET * 0.7);
       keyRef.current.position.y += 0.8;
       keyRef.current.intensity = 2.6 * presence;
     }

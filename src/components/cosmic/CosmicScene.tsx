@@ -20,6 +20,7 @@ import StardustTrail from "./StardustTrail";
 import TulipGarden from "./TulipGarden";
 import MemoryBlocks from "./MemoryBlocks";
 import StoryCarousel from "./StoryCarousel";
+import StoryPlantWall from "./StoryPlantWall";
 // AuroraRelic.tsx is deliberately kept on disk, unmounted here — the
 // brief that replaced it with the tulip garden also floated it as a
 // possible distant Finale callback later ("Relic appears far away
@@ -33,11 +34,13 @@ import StoryCarousel from "./StoryCarousel";
 // carousel-driven "story" chapter and that same photograph (memory-5)
 // appears as a real, whole card in StoryCarousel.tsx, a running figure
 // racing toward a *second*, separately-dissolving copy of it would compete
-// with the carousel rather than support it. StoryPlantWall.tsx (chapter
-// 03's own centrepiece, two passes ago) is retired the same way and for a
-// more direct reason: it positions itself centred straight ahead of the
-// camera every frame, exactly where the new carousel also needs to sit —
-// mounting both would put two foreground objects in the same place.
+// with the carousel rather than support it.
+//
+// StoryPlantWall.tsx was retired the same way for one pass, then brought
+// back: it now positions itself off to one side (SIDE_OFFSET, its own
+// file) instead of dead-centre, so it can stay mounted as the carousel's
+// supporting scenery rather than a second object fighting for the same
+// straight-ahead spot.
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -537,6 +540,7 @@ function Universe({
         <TulipGarden progressRef={progressRef} />
         <MemoryBlocks progressRef={progressRef} />
         <StoryCarousel progressRef={progressRef} />
+        <StoryPlantWall progressRef={progressRef} />
       </WorldGroup>
       <CameraRig
         progressRef={progressRef}
