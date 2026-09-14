@@ -429,8 +429,12 @@ function GardenMeshes({
       // width) petals read as thin blade shards, not rounded petals,
       // confirmed live. Real tulip petals run closer to 1.3-1.6x longer
       // than wide.
-      const petalLength = f.scale * (0.3 + f.depthFactor * 0.05);
-      const petalWidth = f.scale * 0.21;
+      const petalLength = f.scale * (0.34 + f.depthFactor * 0.05);
+      // Narrowed from 0.21 — with the tilt now much tighter (petals
+      // standing closer to upright, cup-shaped rather than splayed open)
+      // the earlier width read as bulky/blobby instead of the slender,
+      // elongated petal shape a real tulip has.
+      const petalWidth = f.scale * 0.165;
       const petalThickness = f.scale * 0.1;
 
       for (let j = 0; j < PETALS_PER_FLOWER; j++) {
@@ -442,9 +446,13 @@ function GardenMeshes({
         // Alternating outer/inner tilt is what makes six evenly-spaced
         // petals actually read as layered and overlapping rather than a
         // single flat ring — the same "3 outer + 3 inner" structure a real
-        // tulip has.
+        // tulip has. Tilt angles pulled way in from an earlier pass's
+        // 0.6/0.42 (34/24 degrees from vertical) — that splayed the petals
+        // open into a flame/lily silhouette; a real tulip is a tight,
+        // mostly-closed cup with petals running close to parallel to the
+        // stem, confirmed against a reference photo.
         const outer = j % 2 === 0;
-        const tilt = (outer ? 0.6 : 0.42) + Math.cos(petalSeed * 1.3) * 0.07;
+        const tilt = (outer ? 0.24 : 0.13) + Math.cos(petalSeed * 1.3) * 0.03;
         const petalScaleJ = 0.92 + Math.sin(petalSeed * 2.1) * 0.08;
 
         ringQuat.setFromAxisAngle(Y_AXIS, ringAngle);
