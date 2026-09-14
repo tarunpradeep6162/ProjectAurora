@@ -17,6 +17,7 @@ import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
 import TarunRunner from "./TarunRunner";
 import PhotoDissolve from "./PhotoDissolve";
+import StardustTrail from "./StardustTrail";
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -520,6 +521,7 @@ function Universe({
         pointerParallax={pointerParallax}
         correctionRef={cameraCorrectionRef}
       />
+      <StardustTrail progressRef={progressRef} />
       <TheatreClock progressRef={progressRef} />
       <FrameBudget onOverBudget={onOverBudget} />
     </>
