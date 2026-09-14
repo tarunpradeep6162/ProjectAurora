@@ -1,16 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
-import { memories } from "@/lib/content";
+import { chapters, memories } from "@/lib/content";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 import { usePointerParallax } from "@/hooks/usePointerParallax";
 import { focusFor } from "@/components/chapters/photoFraming";
 import { useWebGLActive } from "@/hooks/useWebGLActive";
+import {
+  isChapterActive,
+  readSceneProgress,
+  subscribeSceneFrame,
+} from "@/components/cosmic/sceneProgress";
 import CosmicPath from "@/components/cosmic/CosmicPath";
+
+const JOURNEY_CHAPTER_ID = "journey";
+const JOURNEY_INDEX = chapters.findIndex((c) => c.id === JOURNEY_CHAPTER_ID);
 
 /**
  * Three of the real photographs, appearing as faint ghosts along the road —
@@ -70,6 +78,7 @@ export default function ChapterJourney() {
   // device, or WebGL being unavailable — never rendered at the same time as
   // the real one.
   const webglActive = useWebGLActive();
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
   useInViewReveal(root);
   // The live site's own subtle mouse drift on chapter copy — recovered
   // exact strength/damping (see usePointerParallax.ts). Ghosts deliberately
@@ -79,21 +88,21 @@ export default function ChapterJourney() {
 
   useGSAP(
     () => {
+      timelineRef.current = null;
       if (reduced) return;
 
-      // One timeline, one ScrollTrigger, spanning the whole chapter — the
-      // drawn path and the ghost photographs both live on it so they can
-      // never drift out of agreement with each other, and so this stays one
-      // scrubbed trigger for the section rather than several redundant ones
-      // covering the identical range.
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: root.current,
-          start: "top 70%",
-          end: "bottom 40%",
-          scrub: 1,
-        },
-      });
+      // One timeline, driven by the same canonical `sceneProgress` signal
+      // PhotoDissolve/TarunRunner/CoupleModel already use (see the
+      // subscription below) rather than its own separate ScrollTrigger.
+      // Previously this used `start: "top 70%", end: "bottom 40%"` — a
+      // window defined in viewport-relative terms, disagreeing with
+      // sceneProgress's own document-space, viewport-center-crossing
+      // definition of "progress through Journey". The two signals could
+      // report wildly different numbers at the same scroll position because
+      // they were never measuring the same range in the first place. Now
+      // there is exactly one definition of chapter progress on the page.
+      const tl = gsap.timeline({ paused: true });
+      timelineRef.current = tl;
 
       const path = root.current?.querySelector<SVGPathElement>("[data-path]");
       if (path) {
@@ -148,6 +157,27 @@ export default function ChapterJourney() {
     },
     { scope: root, dependencies: [reduced], revertOnUpdate: true }
   );
+
+  // Drives the timeline above from the canonical `sceneProgress` signal —
+  // the same pattern CosmicAtmosphere already uses for its own CSS-custom-
+  // property grading (see sceneProgress.ts's `subscribeSceneFrame` doc).
+  // `chapterProgress` is 0 at the exact moment sceneProgress considers
+  // Journey to begin and 1 at the exact moment it considers it to end, so
+  // this can never disagree with what PhotoDissolve/TarunRunner/CoupleModel
+  // are doing at the same scroll position.
+  useEffect(() => {
+    return subscribeSceneFrame(() => {
+      const tl = timelineRef.current;
+      if (!tl) return;
+      const s = readSceneProgress();
+      const p = isChapterActive(s, JOURNEY_CHAPTER_ID)
+        ? s.chapterProgress
+        : s.chapterIndex > JOURNEY_INDEX
+          ? 1
+          : 0;
+      tl.progress(p);
+    });
+  }, []);
 
   return (
     <section
