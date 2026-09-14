@@ -2103,6 +2103,51 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
+/* Chapter 04's own three ghost photographs (see GHOST_IDS in
+   ChapterJourney.tsx) — smaller and spatially distinct rather than
+   full-bleed like the finale's, since they share the frame with the
+   chapter's title and drawn path instead of standing alone. Positioned via
+   --i so each sits in its own corner of the section and never overlaps the
+   centred copy. Opacity/scale are scroll-scrubbed from React (GSAP), so the
+   only default this file sets is the safe, motion-off starting point. */
+.journey-ghosts {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.journey-ghost {
+  position: absolute;
+  width: min(34vw, 22rem);
+  height: min(34vw, 22rem);
+  opacity: 0;
+  top: calc(18% + (var(--i, 0) * 26%));
+  left: calc(8% + (var(--i, 0) * 34%));
+  -webkit-mask-image: radial-gradient(ellipse 58% 58% at 50% 50%, #000 22%, transparent 76%);
+  mask-image: radial-gradient(ellipse 58% 58% at 50% 50%, #000 22%, transparent 76%);
+}
+
+.journey-ghost:nth-child(even) {
+  left: auto;
+  right: calc(8% + (var(--i, 0) * 10%));
+}
+
+.journey-ghost__img {
+  object-fit: cover;
+  filter: grayscale(0.55) sepia(0.28) brightness(0.82) contrast(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-ghost {
+    opacity: 0;
+  }
+  .journey-ghost:first-child {
+    opacity: 0.07;
+  }
+}
+
 /* Chapter 02's photograph: its resting grade, and the overexposed state it
    emerges from at the end of the entry warp. */
 .miracle-photo {
