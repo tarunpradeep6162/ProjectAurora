@@ -6,6 +6,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
 /**
  * Chapter 2. A quiet photograph and a single line of type, held still.
@@ -25,22 +26,29 @@ export default function ChapterMiracle() {
   const root = useRef<HTMLElement>(null);
   const parallaxRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const narrow = useNarrowViewport();
+  const coarsePointer = useCoarsePointer();
+  // Slow camera depth, not a visibly sliding photo — and off entirely for
+  // touch/narrow devices and reduced motion, per the brief's mobile pass.
+  const skipParallax = reduced || narrow || coarsePointer;
   useInViewReveal(root);
 
   // Parallax lives on its own inner layer, not `.miracle-photo` itself:
   // that element already owns a CSS-driven transform (the portal's warm
   // "emerge" bloom, `data-emerge="light"`) and a GSAP inline transform on
-  // the same element would fight it. This wrapper is 16% taller than the
-  // frame so the drift never uncovers an edge; `.miracle-photo`'s own
-  // `overflow-hidden` (via the section) clips the excess.
+  // the same element would fight it. The wrapper is 24% taller than the
+  // frame (12% bled past each edge) so even the full ±6% drift — which
+  // moves at most ~6.7% of the frame's own height — never uncovers an
+  // edge; `.miracle-photo`'s own `overflow-hidden` (via the section) clips
+  // the excess.
   useGSAP(
     () => {
-      if (reduced || !parallaxRef.current) return;
+      if (skipParallax || !parallaxRef.current) return;
       const tween = gsap.fromTo(
         parallaxRef.current,
-        { yPercent: -8 },
+        { yPercent: -6 },
         {
-          yPercent: 8,
+          yPercent: 6,
           ease: "none",
           scrollTrigger: {
             trigger: root.current,
@@ -55,7 +63,7 @@ export default function ChapterMiracle() {
         tween.kill();
       };
     },
-    { scope: root, dependencies: [reduced], revertOnUpdate: true }
+    { scope: root, dependencies: [skipParallax], revertOnUpdate: true }
   );
 
   return (
@@ -66,7 +74,7 @@ export default function ChapterMiracle() {
       className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-transparent py-32"
     >
       <div data-miracle-bg className="miracle-photo absolute inset-0" aria-hidden="true">
-        <div ref={parallaxRef} className="absolute inset-x-0 -inset-y-[8%]">
+        <div ref={parallaxRef} className="absolute inset-x-0 -inset-y-[12%]">
           <Image
             src="/images/album.jpg"
             alt=""
