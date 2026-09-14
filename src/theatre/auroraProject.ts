@@ -1,6 +1,7 @@
 "use client";
 
 import { getProject, types } from "@theatre/core";
+import auroraState from "./auroraState.json";
 
 /**
  * One project, one master sheet, for the whole site — module-scope so every
@@ -9,19 +10,24 @@ import { getProject, types } from "@theatre/core";
  * CosmicScene.tsx's chunk, which is itself loaded via `next/dynamic(...,
  * {ssr:false})` from CosmicBackdrop — so this never executes during SSR.
  *
- * No `state` is passed to `getProject` yet: nothing has been authored in
- * Studio in this pass. See THEATRE_AUTHORING_GUIDE.md for why hand-writing
- * Theatre's on-disk state format was evaluated and rejected rather than
- * attempted — it's typed `__UNSTABLE_Project_OnDiskState` in Theatre's own
- * public `.d.ts`, and the project's own docstring says it's "as exported by
- * the studio," not meant for external authoring. Every prop below is
- * therefore its own static default — live-tunable in Studio locally, real
- * and inspectable, until an actual authoring session exports
- * `auroraState.json` for production determinism.
+ * `auroraState.json` is passed as `config.state` — not hand-written (see
+ * THEATRE_AUTHORING_GUIDE.md for why hand-writing Theatre's on-disk state
+ * format was evaluated and rejected), but genuinely produced by Theatre
+ * Studio's own public `studio.createContentOfSaveFile()` API, run once in
+ * dev. It's currently minimal (`sheetsById: {}` — no keyframes authored
+ * yet), but it is real, schema-valid, tool-generated JSON, and its mere
+ * presence matters as much as its content right now: without *some*
+ * `config.state`, `@theatre/core` itself throws a real, uncaught error in
+ * any browser where Studio isn't attached — including every production
+ * visitor — exactly one second after `getProject()` runs (see its own
+ * source: "you need to set config.state, otherwise your project's state
+ * will be empty and nothing will animate"). That was shipped once as a
+ * real production bug in this project's history and is fixed by this file
+ * existing at all, independent of whether it holds real keyframes yet.
  */
 export const AURORA_SEQUENCE_LENGTH = 120;
 
-export const auroraProject = getProject("Project Aurora V3");
+export const auroraProject = getProject("Project Aurora V3", { state: auroraState });
 export const masterSheet = auroraProject.sheet("Master Experience");
 
 /**
@@ -135,5 +141,11 @@ if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     // Silently ignores a second call — safe against React StrictMode's
     // double-invoke or a fast-refresh re-import of this module.
     studioModule.default.initialize();
+    // Dev-only convenience for the next real authoring session: once
+    // someone places real keyframes in Studio, re-export via
+    // `window.__theatreStudio.createContentOfSaveFile("Project Aurora V3")`
+    // and overwrite auroraState.json with the result. Never runs in
+    // production regardless (see the guard above).
+    (window as unknown as { __theatreStudio?: unknown }).__theatreStudio = studioModule.default;
   });
 }
