@@ -75,6 +75,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${cormorant.variable} ${jost.variable} h-full antialiased`}
+      // Some browser extensions inject attributes (e.g. a wallet/bridge
+      // extension adding "webcrx") onto <html> before React hydrates,
+      // which is otherwise reported as a hydration mismatch even though
+      // nothing this app rendered actually differs. Scoped to this one
+      // element only — it does not hide a real mismatch anywhere else.
+      suppressHydrationWarning
     >
       {/* No background utility on <body> on purpose: an opaque background
           here would paint over every negative z-index layer and hide the
