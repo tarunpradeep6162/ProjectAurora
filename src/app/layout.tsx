@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Jost } from "next/font/google";
 import "./globals.css";
 import ReducedMotionRoot from "@/components/ReducedMotionRoot";
 import MotionSafetyNet from "@/components/MotionSafetyNet";
+import SmoothScroll from "@/components/SmoothScroll";
 import CosmicAtmosphere from "@/components/cosmic/CosmicAtmosphere";
 
 const cormorant = Cormorant_Garamond({
@@ -57,7 +58,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0b09",
+  themeColor: "#160b2d",
   colorScheme: "dark",
   // Lets the layout reach the physical screen edges on notched phones;
   // every fixed control and edge-anchored block pads itself with
@@ -82,6 +83,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col text-foreground">
         <ReducedMotionRoot />
         <MotionSafetyNet />
+        <SmoothScroll />
         {/* Graded CSS sky + scene transitions. Always mounted — it is the
             base layer under the WebGL canvas and, unchanged, the complete
             fallback whenever that canvas is absent. */}
