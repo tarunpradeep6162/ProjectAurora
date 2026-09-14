@@ -100,6 +100,22 @@ export const theatreMemoryBlocks = masterSheet.object("MemoryBlocks", {
 });
 
 /**
+ * The hero's tulip garden (`TulipGarden.tsx`), which replaced the Aurora
+ * Relic as the portal's signature visual. `reveal` and `windStrength` are
+ * correction layers over the garden's own hand-authored presence curve and
+ * idle sway — same pattern as `Camera`/`AuroraRelic` above — defaulting to
+ * exact no-ops. `keyIntensity`/`rimIntensity` are applied directly, the
+ * same way `RelicKey`/`RelicRim` are, since the garden's lighting has no
+ * other authored source to correct against.
+ */
+export const theatreTulipGarden = masterSheet.object("TulipGarden", {
+  reveal: types.number(1, { range: [0, 1.4], label: "Reveal" }),
+  windStrength: types.number(1, { range: [0, 2], label: "Wind" }),
+  keyIntensity: types.number(2.2, { range: [0, 6] }),
+  rimIntensity: types.number(1.3, { range: [0, 6] }),
+});
+
+/**
  * Created as real, inspectable, Studio-editable objects per the brief's
  * named list — not yet wired into any visual output. Honestly unfinished:
  * see AURORA_V3_ARCHITECTURE.md for exactly what "wired" would mean for
