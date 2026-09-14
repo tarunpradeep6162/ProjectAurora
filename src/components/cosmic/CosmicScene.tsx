@@ -21,6 +21,7 @@ import PhotoDissolve from "./PhotoDissolve";
 import StardustTrail from "./StardustTrail";
 import TulipGarden from "./TulipGarden";
 import MemoryBlocks from "./MemoryBlocks";
+import StoryPlantWall from "./StoryPlantWall";
 // AuroraRelic.tsx is deliberately kept on disk, unmounted here — the
 // brief that replaced it with the tulip garden also floated it as a
 // possible distant Finale callback later ("Relic appears far away
@@ -526,6 +527,7 @@ function Universe({
         <PhotoDissolve progressRef={progressRef} />
         <TulipGarden progressRef={progressRef} />
         <MemoryBlocks progressRef={progressRef} />
+        <StoryPlantWall progressRef={progressRef} />
       </WorldGroup>
       <CameraRig
         progressRef={progressRef}
