@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
 /**
- * Chapter 03's centrepiece: a real WebGL living-wall of plants, straight
- * ahead of the camera and vertically centred, that grows through five
- * distinct phases — one per timeline entry — as the visitor scrolls, and
- * turns slowly as it does. Checked directly against activetheory.net/work
- * for what to reinterpret: not their floating project-card gallery or its
- * UI chrome (a "WORK / CONTACT" nav, prev/next arrows, an AI search box
+ * "The Core": the merged story chapter's central 3D plant, fixed at world
+ * origin `(0, 0, 0)` at all times — StoryCarousel.tsx's eleven real moments
+ * orbit it at a fixed radius (see that file). Grows through five distinct
+ * phases — one per timeline entry — as the visitor scrolls, and turns
+ * slowly as it does. Checked directly against activetheory.net/work for
+ * what to reinterpret: not their floating project-card gallery or its UI
+ * chrome (a "WORK / CONTACT" nav, prev/next arrows, an AI search box
  * belong to their portfolio, not a love story), but the underlying
  * qualities — a persistent, lit 3D object the scroll narrative stages
  * itself around, softened depth behind it, and small drifting bloom-lit
@@ -23,32 +24,25 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  *
  * "3, 4, 5 phases combined": every leaf and blossom is assigned one of the
  * five timeline entries (`phase`, 1-5) at build time. It stays scaled to
- * zero — ungrown — until `chapterProgress` (the same 0-1 value
- * ChapterTimeline.tsx's own ScrollTrigger scrubs its five captions with)
- * reaches that phase's band of the chapter, then grows in with a short
- * smoothstep pop, staggered slightly within the band
- * (`phaseLocalOrder`) so a whole phase doesn't snap in as one unit. The
- * wall is sparse and small at "01 — First meeting" and fully lush,
- * blossoms included, by "05 — Celebration" — the story and the garden
- * growing together, not a decorative backdrop that happens to also be
- * there. Purely a function of scroll position (not accumulated time), so
- * scrolling back up ungrows it the same way it grew, matching every other
- * scrubbed animation on this site.
+ * zero — ungrown — until `chapterProgress` reaches that phase's band of
+ * the chapter, then grows in with a short smoothstep pop, staggered
+ * slightly within the band (`phaseLocalOrder`) so a whole phase doesn't
+ * snap in as one unit. The wall is sparse and small at "01 — First
+ * meeting" and fully lush, blossoms included, by "05 — Celebration" — the
+ * story and the garden growing together, not a decorative backdrop that
+ * happens to also be there. Purely a function of scroll position (not
+ * accumulated time), so scrolling back up ungrows it the same way it
+ * grew, matching every other scrubbed animation on this site.
  *
- * Positioned dynamically every frame from the live camera (`camera.
- * getWorldDirection` + `camera.position`), not a hand-picked static world
- * coordinate: the site's camera arc (CAMERA_KEYS in CosmicScene.tsx) is a
- * continuously-evaluated spline, not a fixed pose per chapter, so staying
- * in frame has to be computed live rather than only being correct at one
- * scroll position. Originally dead-centre; moved off to one side
- * (`SIDE_OFFSET`, along the camera's own right vector) once this chapter
- * also gained StoryCarousel.tsx, which needs the straight-ahead spot for
- * itself — this wall is now the carousel's supporting scenery, a real
- * garden growing at the edge of the scene, not a second object competing
- * for the same one. `group.lookAt(camera.position)` every frame keeps its
- * flat face turned toward the viewer regardless. A slow idle turn plus
- * real scroll-scrubbed rotation on top means it also visibly turns
- * further with every phase, so no single angle of it is ever "the" view.
+ * Position: genuinely fixed at the origin, set once and never touched
+ * again per frame — not the earlier camera-relative version, which
+ * recomputed `camera.position + forward*distance` every frame to stay in
+ * frame as the camera moved. A later spec asked for the plant to "remain
+ * perfectly centred at world origin at all times" rather than chasing the
+ * camera, which is a genuine behavioural difference: the camera now flies
+ * past/around a truly stationary object instead of the object re-centring
+ * itself under a moving camera. Rotation is still live — the slow idle
+ * turn plus real scroll-scrubbed spin below — but position is not.
  *
  * Built from the same primitives as the rest of this scene: two
  * `InstancedMesh` leaf shapes (a slender fern blade and a rounder broad
@@ -74,11 +68,6 @@ function seededRandom(seed: number): () => number {
 const WALL_WIDTH = 1.15;
 const WALL_HEIGHT = 1.95;
 const BOX_HEIGHT = 0.3;
-const DISTANCE_AHEAD = 3.1;
-// How far right of dead-centre the wall sits — enough to clear
-// StoryCarousel.tsx's own ring (radius ~2, straight ahead), not so far it
-// falls outside frame at this chapter's typical field of view.
-const SIDE_OFFSET = 1.7;
 
 function buildFernShape(): THREE.Shape {
   const shape = new THREE.Shape();
@@ -260,7 +249,6 @@ export default function StoryPlantWall({
   const blossoms = useMemo(() => buildBlossoms(blossomCount), [blossomCount]);
   const sparkles = useMemo(() => buildSparkles(sparkleCount), [sparkleCount]);
 
-  const camera = useThree((state) => state.camera);
   const groupRef = useRef<THREE.Group>(null);
   const fernRef = useRef<THREE.InstancedMesh>(null);
   const broadRef = useRef<THREE.InstancedMesh>(null);
@@ -325,10 +313,6 @@ export default function StoryPlantWall({
   const quaternion = useMemo(() => new THREE.Quaternion(), []);
   const euler = useMemo(() => new THREE.Euler(), []);
   const scaleVec = useMemo(() => new THREE.Vector3(), []);
-  const forward = useMemo(() => new THREE.Vector3(), []);
-  const right = useMemo(() => new THREE.Vector3(), []);
-  const anchor = useMemo(() => new THREE.Vector3(), []);
-  const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
   // How grown a single instance is, 0-1, purely a function of scroll
   // position: 0 until chapterProgress reaches this instance's phase band,
@@ -375,36 +359,14 @@ export default function StoryPlantWall({
       : spinRef.current;
     spinRef.current = scrollSpin;
 
-    camera.getWorldDirection(forward);
-    // Off to one side now, not dead-centre: this chapter also has
-    // StoryCarousel.tsx, which needs the straight-ahead position for
-    // itself. Same camera-relative technique, offset sideways along the
-    // camera's own right vector so the wall reads as a real plant growing
-    // at the edge of the scene the carousel is staged in, not a second
-    // object competing for the same spot.
-    right.crossVectors(forward, camera.up).normalize();
-    anchor
-      .copy(camera.position)
-      .addScaledVector(forward, DISTANCE_AHEAD)
-      .addScaledVector(right, SIDE_OFFSET);
-    group.position.copy(anchor);
-    lookTarget.copy(camera.position);
-    group.lookAt(lookTarget);
-    group.rotateY(idleSpin + scrollSpin);
+    // Fixed at world origin, always — "The Core" per the spec. Only
+    // rotation is live: idle drift plus real scroll-scrubbed spin, set
+    // directly rather than composed with a camera-facing lookAt.
+    group.position.set(0, 0, 0);
+    group.rotation.set(0, idleSpin + scrollSpin, 0);
 
-    if (keyRef.current) {
-      keyRef.current.position
-        .copy(camera.position)
-        .addScaledVector(forward, DISTANCE_AHEAD * 0.55)
-        .addScaledVector(right, SIDE_OFFSET * 0.7);
-      keyRef.current.position.y += 0.8;
-      keyRef.current.intensity = 2.6 * presence;
-    }
-    if (rimRef.current) {
-      rimRef.current.position.copy(anchor);
-      rimRef.current.position.y += 0.6;
-      rimRef.current.intensity = 1.4 * presence;
-    }
+    if (keyRef.current) keyRef.current.intensity = 2.6 * presence;
+    if (rimRef.current) rimRef.current.intensity = 1.4 * presence;
 
     // Grow each phase's leaves in as chapterProgress reaches its band —
     // this is what makes "5 phases combined" a real, continuous scroll
@@ -457,8 +419,11 @@ export default function StoryPlantWall({
 
   return (
     <group ref={groupRef} visible={false}>
-      <pointLight ref={keyRef} color="#fbead0" intensity={0} distance={5} decay={2} />
-      <pointLight ref={rimRef} color="#8fd0a8" intensity={0} distance={4.5} decay={2} />
+      {/* Fixed positions now too, matching the plant's own fixed placement
+          — offset from the origin for real key/rim directionality rather
+          than sitting on top of the plant they're lighting. */}
+      <pointLight ref={keyRef} position={[1.1, 1.2, 1.6]} color="#fbead0" intensity={0} distance={5} decay={2} />
+      <pointLight ref={rimRef} position={[-0.9, 0.9, -1.4]} color="#8fd0a8" intensity={0} distance={4.5} decay={2} />
 
       <mesh
         ref={boxRef}
