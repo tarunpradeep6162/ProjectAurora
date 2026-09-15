@@ -58,6 +58,12 @@ export default function ChapterStory() {
   const cards = useMemo(() => buildCards(), []);
   const activeIndex = useActiveCardIndex();
   const activeCard = cards[activeIndex] ?? cards[0];
+  // The chapter's own quiet closing beat ("ordinary days"): the last card
+  // is always the final photograph (memory-5, "The One I Would Keep") —
+  // once it's the one at the front, its own genuine note
+  // (content.ts — previously sr-only only, never shown) surfaces as the
+  // chapter's last line before the Letter, rather than new invented copy.
+  const isClosingBeat = activeIndex === cards.length - 1 && Boolean(activeCard.note);
 
   useGSAP(
     () => {
@@ -108,6 +114,18 @@ export default function ChapterStory() {
         <p className="type-emotion mx-auto mt-3 max-w-md" aria-hidden="true">
           {activeCard.line}
         </p>
+        {/* Ordinary Days: the same synced-caption mechanism, one beat
+            quieter — the chapter's real closing thought, not a new
+            fabricated one, surfacing only once the story has actually
+            arrived at its last photograph. */}
+        {isClosingBeat && (
+          <p
+            className="type-story mx-auto mt-8 max-w-sm italic opacity-75"
+            aria-hidden="true"
+          >
+            {activeCard.note}
+          </p>
+        )}
       </div>
 
       {/* Full accessible content for all eleven moments, in order — the

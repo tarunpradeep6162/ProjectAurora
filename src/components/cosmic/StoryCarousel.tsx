@@ -81,6 +81,11 @@ export type CardDatum = {
   meta: string;
   line: string;
   src?: string;
+  /** A photo's own small personal note (content.ts's `Memory.note`) — real,
+   * genuine, previously sr-only only. ChapterStory.tsx surfaces the last
+   * card's note as the chapter's own quiet closing line ("Ordinary Days")
+   * rather than inventing new copy for that beat. */
+  note?: string;
 };
 
 /** The same 11-card sequence the carousel renders, for ChapterStory.tsx's
@@ -111,6 +116,7 @@ export function buildCards(): CardDatum[] {
       meta: memory.place,
       line: memory.caption,
       src: memory.src,
+      note: memory.note,
     });
   }
   return cards;
@@ -293,13 +299,24 @@ export default function StoryCarousel({
     // photograph) has rolled all the way to the front — one continuous
     // turn across the whole merged chapter's scroll, not per-sub-chapter.
     const targetOffset = -progress.chapterProgress * ANGLE_STEP * (CARD_COUNT - 1);
+    // The "gravity moment": in the chapter's last stretch (0.82-0.96,
+    // ending right where the presence fade toward the Letter begins),
+    // everything visibly gathers rather than just stopping — the ring's
+    // own damping heavies up (time itself feels slower to settle) and,
+    // below, its radius pulls inward toward the plant. Not fully to zero:
+    // a genuine convergence, not a collapse.
+    const closing = active
+      ? THREE.MathUtils.smoothstep(progress.chapterProgress, 0.82, 0.96)
+      : 0;
+    const damping = THREE.MathUtils.lerp(0.45, 1.15, closing);
     // Frame-rate-independent exponential damping — this project's own
     // convention in place of the brief's fixed per-frame lerp factor, for
     // the same "glides to a stop rather than jumps" momentum feel
     // regardless of frame rate.
     scrollOffsetRef.current +=
-      (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / 0.45));
+      (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / damping));
     const scrollOffset = scrollOffsetRef.current;
+    const ringRadius = radius * (1 - 0.62 * closing);
 
     // Angular velocity (rad/s) of the *lerped* rotation, not the raw
     // scroll — StoryPostFX.tsx's chromatic aberration reads this to know
@@ -347,8 +364,8 @@ export default function StoryCarousel({
       const slot = slotAngles[i];
       // Local to the group, which already carries the scroll rotation —
       // no need to add scrollOffset again here.
-      const x = Math.sin(slot) * radius;
-      const z = Math.cos(slot) * radius;
+      const x = Math.sin(slot) * ringRadius;
+      const z = Math.cos(slot) * ringRadius;
       cardPos.set(x, 0, z);
       mesh.position.copy(cardPos);
       // Tangent-facing — each card also turns with its position on the
