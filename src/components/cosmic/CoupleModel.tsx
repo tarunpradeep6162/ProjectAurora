@@ -14,11 +14,16 @@ import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 // crash if it's missing.
 const MODEL_URL = "/models/couple.glb";
 
-// The couple figure surfaces specifically in "The journey between us"
-// (content.ts chapter id "journey") — its hidden message, "a glowing path
-// of memories, growth and choosing each other," is exactly what a couple
-// drifting through the cosmic backdrop is meant to visualize.
-const COUPLE_CHAPTER_ID = "journey";
+// The couple figure surfaces during "the journey between us" — originally
+// its own chapter (id "journey"), now the journey card's own slice of the
+// merged "story" chapter's carousel (chapters 03-05 combined, see
+// content.ts). Its subtitle, "a glowing path of memories, growth and
+// choosing each other," is exactly what a couple drifting through the
+// cosmic backdrop is meant to visualize; re-gated to "story" rather than
+// left to go dark when "journey" stopped existing as its own chapter, and
+// `stageJourney` below narrowed to roughly the carousel's journey-card
+// window instead of a whole chapter's worth of scroll.
+const COUPLE_CHAPTER_ID = "story";
 
 // Starting points for staging, deliberately expressed as named constants so
 // they can be corrected in one line each once a real file exists to look at.
@@ -163,13 +168,21 @@ function pickIdleClip(clips: THREE.AnimationClip[]): THREE.AnimationClip | null 
  * before the chapter hands off — so the reveal is a moment rather than a
  * model that is simply switched on.
  */
+// The merged "story" chapter's carousel runs 5 timeline cards, then a
+// journey card, then 5 memory cards (11 total, see StoryCarousel.tsx) — the
+// journey card sits at roughly 5/11 of the chapter's own chapterProgress.
+// These thresholds used to span nearly the whole (much shorter) "journey"
+// chapter; narrowed to a window around that same fraction so the couple
+// still surfaces specifically while the journey card is at the carousel's
+// front, not smeared across content that now belongs to the timeline or
+// the photographs instead.
 function stageJourney(p: number): { presence: number; illumination: number } {
   const presence =
-    THREE.MathUtils.smoothstep(p, 0.08, 0.28) *
-    (1 - THREE.MathUtils.smoothstep(p, 0.86, 1));
+    THREE.MathUtils.smoothstep(p, 0.36, 0.42) *
+    (1 - THREE.MathUtils.smoothstep(p, 0.52, 0.6));
   const illumination =
-    THREE.MathUtils.smoothstep(p, 0.24, 0.66) *
-    (1 - THREE.MathUtils.smoothstep(p, 0.8, 0.96));
+    THREE.MathUtils.smoothstep(p, 0.4, 0.45) *
+    (1 - THREE.MathUtils.smoothstep(p, 0.48, 0.54));
   return { presence, illumination };
 }
 

@@ -26,6 +26,13 @@ export const chapters: Chapter[] = [
     subtitle:
       "A cinematic beginning for the person who made ordinary days feel extraordinary.",
   },
+  // Chapters 03 (Our story), 04 (The journey) and 05 (Memories) were merged
+  // into this single chapter on request — a real 3D rolling/cylindrical
+  // carousel (StoryCarousel.tsx) now carries all three: the five timeline
+  // moments, the journey, and the five real photographs, as one continuous
+  // scroll-driven ride rather than three separate chapters. Title/subtitle
+  // kept verbatim from the original "story" chapter — genuine, unedited
+  // content, not a new sentence written to summarise all three.
   {
     id: "story",
     number: "03",
@@ -34,41 +41,46 @@ export const chapters: Chapter[] = [
       "Every conversation, every smile and every small moment left a light behind.",
   },
   {
-    id: "journey",
-    number: "04",
-    title: "The journey between us",
-    subtitle:
-      "Not a straight line, but a glowing path of memories, growth and choosing each other.",
-  },
-  {
-    id: "memories",
-    number: "05",
-    title: "Memories suspended in time",
-    subtitle:
-      "Moments drift around us like photographs that never learned how to fade.",
-  },
-  {
     id: "letter",
-    number: "06",
+    number: "04",
     title: "A letter from my heart",
     subtitle:
       "Some feelings deserve more than a message. They deserve a universe of their own.",
   },
   {
     id: "birthday",
-    number: "07",
+    number: "05",
     title: "Happy Birthday, Dheepika",
     subtitle:
       "May this new year of your life carry wonder, peace, laughter and all the love you deserve.",
   },
   {
     id: "finale",
-    number: "08",
+    number: "06",
     title: "And this is only the beginning",
     subtitle:
       "The universe grows quiet, but our story continues beyond the final star.",
   },
 ];
+
+/**
+ * The former chapter 04's genuine title/subtitle — its own chapter entry is
+ * gone (merged into "story", see `chapters` above), but the real words stay
+ * available for the merged chapter's own accessible content and its
+ * carousel's journey card, exactly as originally written.
+ */
+export const journey = {
+  title: "The journey between us",
+  subtitle:
+    "Not a straight line, but a glowing path of memories, growth and choosing each other.",
+};
+
+/** The former chapter 05's genuine title/subtitle, kept the same way. */
+export const memoriesIntro = {
+  title: "Memories suspended in time",
+  subtitle:
+    "Moments drift around us like photographs that never learned how to fade.",
+};
 
 export type TimelineEntry = {
   number: string;
@@ -203,9 +215,14 @@ export const birthdayCard = {
 
 export type HiddenMessage = {
   /**
-   * Position along the whole story, 0-1, as authored on the original site.
-   * Eight messages across eight chapters: `floor(position * 8)` lands exactly
-   * one message in each chapter, in order.
+   * Position along the whole story, 0-1, as authored on the original site
+   * (eight messages, evenly spread — originally one per chapter, back when
+   * there were eight chapters). Positions themselves are untouched by the
+   * chapters 03-05 merge (HiddenMessages.tsx's `chapterIndexFor` derives a
+   * message's chapter generically from `chapters.length`, whatever that is)
+   * — the merged "story" chapter now simply owns however many of these
+   * eight positions land inside its now-larger span, rather than exactly
+   * one.
    */
   position: number;
   /** Which margin it sits in — the original alternated sides. */

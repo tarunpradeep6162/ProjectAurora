@@ -355,6 +355,28 @@ body {
   color: var(--accent-soft);
 }
 
+/* Chapter 02's "11:11" — a real, specific moment, not a generic chapter
+   number, so it gets its own treatment rather than reusing .type-meta or
+   .type-chapter: a large, bold, geometric numeral (the body sans at its
+   heaviest loaded weight) matching the clean digital-clock digits in the
+   reference photo it was matched against, distinct from the site's serif
+   display type used everywhere else. */
+.type-numeral {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: clamp(2.75rem, 2.1rem + 3vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--aurora-ivory);
+  text-shadow: 0 0 28px color-mix(in srgb, var(--aurora-ivory) 45%, transparent);
+}
+
+.type-numeral-colon {
+  display: inline-block;
+  margin: 0 0.02em;
+  opacity: 0.55;
+}
+
 /* Story copy, reading mode: the letter. 18-20px on phones, up to 24px on a
    desktop, set in the serif with a long line-height. */
 .type-letter {
@@ -2215,17 +2237,25 @@ html[data-aurora-hush] .hidden-star {
   }
 }
 
-/* Chapter 02's photograph: its resting grade, and the overexposed state it
-   emerges from at the end of the entry warp. */
-.miracle-photo {
+/* Chapter 02's dense nebula is real WebGL now (MiracleNebula.tsx, mounted
+   in the persistent scene) — a CSS gradient version lived here briefly and
+   was replaced after checking it live against a reference photo and
+   finding it flat and starless; a mostly-opaque div can't let the real
+   starfield behind it show through the way genuine noise-driven alpha can. */
+.miracle-glow {
   opacity: 0.2;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 45%,
+    color-mix(in srgb, var(--accent) 55%, transparent) 0%,
+    transparent 70%
+  );
   transition:
     opacity 1.8s var(--ease-soft),
     transform 2.4s var(--ease-cinematic),
     filter 1.8s var(--ease-soft);
 }
 
-#miracle[data-emerge="light"] .miracle-photo {
+#miracle[data-emerge="light"] .miracle-glow {
   opacity: 0.8;
   transform: scale(1.06);
   filter: brightness(2.1) saturate(0.35) blur(8px);

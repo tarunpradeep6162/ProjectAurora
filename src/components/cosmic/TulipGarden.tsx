@@ -12,18 +12,28 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  * dark, cinematic 3D tulip garden the visitor stands inside of, rather
  * than a single sculptural object in front of them. Entirely procedural —
  * no photograph, no downloaded asset. Three shared geometries (stem, leaf,
- * flower bulb), each reused across every instance via `InstancedMesh`, so
- * total draw calls stay at 3 regardless of how many flowers are in the
- * field.
+ * petal), each reused across every instance via `InstancedMesh`, so total
+ * draw calls stay at 3 regardless of how many flowers are in the field.
  *
- * Flower bulb geometry: a `THREE.LatheGeometry` revolved from a tulip-bulb
- * profile curve (narrow base, bulging belly, a pinch, a small flared rim)
- * — deliberately given only 6 radial segments rather than a smooth many-
- * sided revolve, so the facets themselves read as petals. Not six separate
- * petal meshes (that would multiply the instance count sixfold for a
- * marginal silhouette gain); this was the efficient version of the same
- * idea.
+ * Flower head, corrected during this pass: the first version used one
+ * `LatheGeometry` per flower (a revolved tulip-bulb profile, 6 radial
+ * segments standing in for petals). Verified live and rejected — a
+ * rotationally-symmetric revolve reads as a faceted abstract solid, not a
+ * flower, no matter how the profile curve is tuned, because real tulip
+ * petals aren't rotationally symmetric around a shared axis; they're six
+ * individually curved, overlapping shapes. Replaced with six actual petal
+ * instances per flower (`buildPetalGeometry`, below): each a curved lune
+ * cut from a sphere (a cheap, stock way to get a naturally cupped,
+ * tapering surface with no custom vertex math), arranged around the
+ * flower's own tip with alternating outer/inner tilt so they visually
+ * overlap the way real tulip petals do, plus a baked vertex-colour
+ * gradient (darker/recessed near the base, full colour at the tip) for a
+ * shaded, non-flat read. One `InstancedMesh` still covers every petal on
+ * every flower — six times the instance count, the same one draw call.
  */
+const PETALS_PER_FLOWER = 6;
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 const SEED = 20251125; // 25 November — this project's own recurring seed.
 function seededRandom(seed: number): () => number {
@@ -45,25 +55,32 @@ function seededRandom(seed: number): () => number {
 const NEAR_Z = 8.0;
 const FAR_Z = 6.2;
 
-const DESKTOP_COUNT = 90;
-const MOBILE_COUNT = 34;
+// Raised from 90/34 — confirmed live the garden read as sparse rather
+// than "covering the page." Instancing keeps this cheap regardless (one
+// draw call per mesh type no matter the count): 130 flowers is still only
+// 130 stems + up to 260 leaves + 780 petals.
+const DESKTOP_COUNT = 130;
+const MOBILE_COUNT = 46;
 
 // Mostly pink/rose/peach/cream/yellow, less red/orange, rare magenta —
 // weighted by repetition rather than a separate probability table, so the
-// mix stays readable as "a natural garden," not a rainbow.
+// mix stays readable as "a natural garden," not a rainbow. Raised in
+// saturation/brightness from an earlier, muddier pass — confirmed live the
+// garden read as dull/washed out next to real tulip photography, which is
+// far more saturated than this scene's moody dark backdrop suggested.
 const PALETTE: THREE.Color[] = [
-  new THREE.Color("#e8879e"),
-  new THREE.Color("#e8879e"),
-  new THREE.Color("#c1476b"),
-  new THREE.Color("#c1476b"),
-  new THREE.Color("#e8a26b"),
-  new THREE.Color("#e8a26b"),
-  new THREE.Color("#f0e4c8"),
-  new THREE.Color("#f0e4c8"),
-  new THREE.Color("#e8d17a"),
-  new THREE.Color("#b8394a"),
-  new THREE.Color("#d97a3d"),
-  new THREE.Color("#c14a8a"), // rare magenta
+  new THREE.Color("#f4789e"),
+  new THREE.Color("#f4789e"),
+  new THREE.Color("#e01f4f"),
+  new THREE.Color("#e01f4f"),
+  new THREE.Color("#f68a3d"),
+  new THREE.Color("#f68a3d"),
+  new THREE.Color("#fdf2d5"),
+  new THREE.Color("#fdf2d5"),
+  new THREE.Color("#f7d23e"),
+  new THREE.Color("#c81238"),
+  new THREE.Color("#e8631f"),
+  new THREE.Color("#d61f95"), // rare magenta
 ];
 
 const LEAF_GREEN = new THREE.Color("#1c3320");
@@ -85,16 +102,75 @@ type FlowerDatum = {
   leafTilts: number[];
 };
 
-function buildTulipProfile(): THREE.Vector2[] {
-  return [
-    new THREE.Vector2(0.0, 0.0),
-    new THREE.Vector2(0.045, 0.015),
-    new THREE.Vector2(0.1, 0.09),
-    new THREE.Vector2(0.135, 0.22),
-    new THREE.Vector2(0.14, 0.32), // the bulb's widest belly
-    new THREE.Vector2(0.095, 0.4), // the tulip's characteristic pinch
-    new THREE.Vector2(0.115, 0.46), // petals flare very slightly at the rim
-  ];
+/**
+ * A single tulip petal. Rebuilt after checking real closed-tulip reference
+ * photos (Google Images) against the previous geometry: a real petal is
+ * narrow where it attaches at the base, bulges out to its widest around
+ * the middle, then rounds off to a **blunt**, not pointed, tip — and on a
+ * closed tulip the whole flower reads as one smooth, plump, rounded-oval
+ * bud, not a spray of pointed blades.
+ *
+ * The earlier version cut a lune from a sphere (pole-to-equator): that
+ * shape is wide at the base and tapers *linearly to an actual point* at
+ * the tip — backwards from real anatomy, and the sharp point is exactly
+ * what made the flower read as an open flame/lily shape rather than a
+ * closed cup no matter how the tilt was tuned. This version is a 2D
+ * profile (`THREE.Shape`, narrow-base → wide-belly → rounded-tip, mirrored
+ * left/right) extruded flat then bent slightly concave across its width —
+ * the same "flat ShapeGeometry needs out-of-plane displacement or it
+ * looks fake" lesson already learned from the leaves (`buildLeafGeometry`)
+ * — so it reads as a soft cupped surface, not a sheet of paper.
+ *
+ * A vertex-colour gradient is baked in at the same time — shaded/recessed
+ * near the base, full brightness at the tip — multiplied against each
+ * instance's own colour at render time (`vertexColors` + `instanceColor`
+ * both apply on `MeshPhysicalMaterial` without conflicting).
+ */
+function buildPetalShape(): THREE.Shape {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(0.3, 0.12, 0.38, 0.4);
+  shape.quadraticCurveTo(0.32, 0.78, 0.13, 0.93);
+  shape.quadraticCurveTo(0.05, 0.99, 0, 1);
+  shape.quadraticCurveTo(-0.05, 0.99, -0.13, 0.93);
+  shape.quadraticCurveTo(-0.32, 0.78, -0.38, 0.4);
+  shape.quadraticCurveTo(-0.3, 0.12, 0, 0);
+  return shape;
+}
+
+function buildPetalGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.ShapeGeometry(buildPetalShape(), 10);
+  const pos = geo.attributes.position;
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = THREE.MathUtils.clamp(pos.getY(i), 0, 1);
+    // Concave across the width (both edges curl slightly toward the
+    // flower's own centre axis), stronger near the tip than the base —
+    // a closed tulip's petals cup inward to enclose the bud, they don't
+    // stay flat or curl outward/backward the way an open flower's do.
+    const channel = 0.24 * x * x * (0.35 + 0.65 * y);
+    pos.setZ(i, channel);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+
+  const colors = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const t = THREE.MathUtils.clamp(pos.getY(i), 0, 1);
+    // Steeper contrast than an earlier pass's 0.55-1.0 — that range read as
+    // flat/dull under this scene's dark, point-lit backdrop. The tip now
+    // pushes past 1.0 (an HDR-ish highlight ACES tonemapping can render as
+    // real brightness, not a clamp), so the petal has a genuine lit pop
+    // near its rim instead of just "less dark" shading.
+    const shade = THREE.MathUtils.lerp(0.45, 1.15, t);
+    colors[i * 3] = shade;
+    colors[i * 3 + 1] = shade;
+    colors[i * 3 + 2] = shade;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+  return geo;
 }
 
 function buildLeafShape(): THREE.Shape {
@@ -110,26 +186,58 @@ function buildLeafShape(): THREE.Shape {
   return shape;
 }
 
+/**
+ * `buildLeafShape()` on its own produces a perfectly flat `ShapeGeometry`
+ * — every vertex shares one normal. Confirmed live and rejected: next to
+ * the garden's own point lights, a flat plane like that catches specular
+ * reflection uniformly across its whole surface and reads as one blown-out
+ * bright shape (the "folded gold paper" the user flagged), not a green
+ * leaf with any natural shading. Bends the geometry out of plane once here
+ * — more curl toward the tip, a slight channel across the width, like a
+ * real blade — then recomputes normals so lighting actually varies across
+ * the surface the way it does on the (already-curved) petals.
+ */
+function buildLeafGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.ShapeGeometry(buildLeafShape(), 8);
+  const pos = geo.attributes.position;
+  let maxY = 0;
+  for (let i = 0; i < pos.count; i++) maxY = Math.max(maxY, pos.getY(i));
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const t = Math.max(0, y / Math.max(1e-6, maxY));
+    const bend = 0.05 * Math.pow(t, 1.6);
+    const channel = -0.16 * x * x;
+    pos.setZ(i, bend + channel);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
   const rand = seededRandom(SEED + count);
   const flowers: FlowerDatum[] = [];
 
-  // Cluster centers, not a grid — a handful of denser patches with open
-  // space between them. Biased right/center on desktop so the left side
-  // stays clear for "FOR DHEEPIKA / PROJECT AURORA"; a narrower spread on
-  // mobile, the same lesson the Relic's own x-offset already taught this
-  // project (a desktop-tuned horizontal offset sits entirely outside a
-  // portrait phone's much tighter horizontal FOV).
-  const clusterCount = 5;
+  // Cluster centers, not a grid — denser patches with open space between
+  // them, not empty rows. Widened and made denser from an earlier pass —
+  // confirmed live the garden read as sparse, concentrated on the right
+  // edge rather than filling the frame. Still a little lighter toward the
+  // far left (the hero's typography still needs its own space), but no
+  // longer excludes most of the page — a narrower spread on mobile, the
+  // same lesson the Relic's own x-offset already taught this project (a
+  // desktop-tuned horizontal offset sits entirely outside a portrait
+  // phone's much tighter horizontal FOV).
+  const clusterCount = 8;
   const clusters: { x: number; y: number; z: number; r: number }[] = [];
   for (let c = 0; c < clusterCount; c++) {
-    const xBase = mobileTier ? 0.15 : 0.55;
-    const xSpread = mobileTier ? 0.55 : 1.1;
+    const xBase = mobileTier ? 0.1 : 0.32;
+    const xSpread = mobileTier ? 0.85 : 1.65;
     clusters.push({
-      x: xBase + (rand() - 0.35) * xSpread,
+      x: xBase + (rand() - 0.4) * xSpread,
       y: -0.55 + (rand() - 0.5) * 0.7,
       z: FAR_Z + rand() * (NEAR_Z - FAR_Z),
-      r: 0.45 + rand() * 0.55,
+      r: 0.5 + rand() * 0.6,
     });
   }
 
@@ -141,8 +249,14 @@ function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
     const z = THREE.MathUtils.clamp(cluster.z + (rand() - 0.5) * 0.5, FAR_Z, NEAR_Z);
     const depthFactor = (z - FAR_Z) / (NEAR_Z - FAR_Z);
     // A handful of near instances get a real foreground boost — "3-6
-    // larger foreground elements, some partially outside the viewport".
-    const foreground = depthFactor > 0.82 && rand() < 0.3;
+    // larger foreground elements, some partially outside the viewport" —
+    // but gated to the right/center, never far left: widening the cluster
+    // spread for fuller page coverage meant a large foreground bloom could
+    // land directly over "FOR DHEEPIKA / PROJECT AURORA", confirmed live.
+    // The far-left band stays populated (for coverage) but with smaller,
+    // calmer flowers only.
+    const foreground = depthFactor > 0.82 && rand() < 0.3 && x > 0.25;
+    const textSafeDamping = x < 0.05 ? 0.55 : 1;
 
     // Calibrated against the project's own human-scale convention
     // (TarunRunner/CoupleModel target 1.7 units = a person's height) — a
@@ -154,12 +268,15 @@ function buildLayout(count: number, mobileTier: boolean): FlowerDatum[] {
     const y = cluster.y + Math.sin(angle) * radius * 0.3 + (rand() - 0.5) * 0.15;
 
     const scaleJitter = 0.8 + rand() * 0.5;
-    const scale = (foreground ? 1.15 : 0.45 + depthFactor * 0.55) * scaleJitter;
+    const scale = (foreground ? 1.15 : 0.45 + depthFactor * 0.55) * scaleJitter * textSafeDamping;
 
     const color = PALETTE[Math.floor(rand() * PALETTE.length)].clone();
     // Far flowers desaturate and darken into the atmosphere rather than
-    // just becoming smaller — real depth, not just scale.
-    const fogAmount = (1 - depthFactor) * 0.55;
+    // just becoming smaller — real depth, not just scale. Eased back from
+    // an earlier pass's 0.55 max — that washed even midground flowers most
+    // of the way to near-black, flattening color/contrast across the whole
+    // garden rather than just the true background layer.
+    const fogAmount = (1 - depthFactor) * 0.35;
     color.lerp(DISTANCE_FOG, fogAmount);
 
     const leafCount: 1 | 2 = rand() < 0.35 ? 1 : 2;
@@ -193,23 +310,20 @@ function GardenMeshes({
   flowers: FlowerDatum[];
 }) {
   const stemGeo = useMemo(() => new THREE.CylinderGeometry(0.006, 0.012, 1, 6, 1), []);
-  const leafGeo = useMemo(() => new THREE.ShapeGeometry(buildLeafShape(), 8), []);
-  const bulbGeo = useMemo(
-    () => new THREE.LatheGeometry(buildTulipProfile(), 6),
-    []
-  );
+  const leafGeo = useMemo(() => buildLeafGeometry(), []);
+  const petalGeo = useMemo(() => buildPetalGeometry(), []);
 
   useEffect(() => {
     return () => {
       stemGeo.dispose();
       leafGeo.dispose();
-      bulbGeo.dispose();
+      petalGeo.dispose();
     };
-  }, [stemGeo, leafGeo, bulbGeo]);
+  }, [stemGeo, leafGeo, petalGeo]);
 
   const stemRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
-  const bulbRef = useRef<THREE.InstancedMesh>(null);
+  const petalRef = useRef<THREE.InstancedMesh>(null);
   const keyRef = useRef<THREE.PointLight>(null);
   const rimRef = useRef<THREE.PointLight>(null);
   const groupRef = useRef<THREE.Group>(null);
@@ -222,16 +336,24 @@ function GardenMeshes({
     () => flowers.reduce((sum, f) => sum + f.leafCount, 0),
     [flowers]
   );
+  const petalInstanceCount = useMemo(
+    () => flowers.length * PETALS_PER_FLOWER,
+    [flowers]
+  );
 
   useEffect(() => {
-    const bulb = bulbRef.current;
-    if (!bulb) return;
+    const petal = petalRef.current;
+    if (!petal) return;
     const color = new THREE.Color();
+    let idx = 0;
     for (let i = 0; i < flowers.length; i++) {
       color.copy(flowers[i].colorMix);
-      bulb.setColorAt(i, color);
+      // All six petals of one flower share its assigned hue — the
+      // per-vertex shading gradient baked into the geometry is what gives
+      // each petal its own tonal variation, not a different colour per petal.
+      for (let j = 0; j < PETALS_PER_FLOWER; j++) petal.setColorAt(idx++, color);
     }
-    if (bulb.instanceColor) bulb.instanceColor.needsUpdate = true;
+    if (petal.instanceColor) petal.instanceColor.needsUpdate = true;
   }, [flowers]);
 
   useEffect(() => {
@@ -252,14 +374,18 @@ function GardenMeshes({
   const quaternion = useMemo(() => new THREE.Quaternion(), []);
   const euler = useMemo(() => new THREE.Euler(), []);
   const scaleVec = useMemo(() => new THREE.Vector3(), []);
+  const flowerQuat = useMemo(() => new THREE.Quaternion(), []);
+  const ringQuat = useMemo(() => new THREE.Quaternion(), []);
+  const tiltQuat = useMemo(() => new THREE.Quaternion(), []);
+  const tipOffset = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state, delta) => {
     if (typeof document !== "undefined" && document.hidden) return;
     const group = groupRef.current;
     const stem = stemRef.current;
     const leaf = leafRef.current;
-    const bulb = bulbRef.current;
-    if (!group || !stem || !leaf || !bulb) return;
+    const petal = petalRef.current;
+    if (!group || !stem || !leaf || !petal) return;
     const dt = Math.min(delta, 0.1);
 
     const progress = progressRef.current;
@@ -289,6 +415,7 @@ function GardenMeshes({
     const wind = correction.windStrength;
 
     let leafIndex = 0;
+    let petalIndex = 0;
     for (let i = 0; i < flowers.length; i++) {
       const f = flowers[i];
       // Near flowers sway more from the pointer than far ones — the same
@@ -312,19 +439,65 @@ function GardenMeshes({
       matrix.compose(position, quaternion, scaleVec);
       stem.setMatrixAt(i, matrix);
 
-      // Bulb: sits at the stem's tip, same lean carried through so the
-      // flower head reads as attached to its own stem, not floating.
-      const tipOffset = new THREE.Vector3(
+      // Flower head: six petals fanned around the stem's tip. All six
+      // share the same base position and the same "flower head" carrier
+      // orientation (the stem's own lean, carried through, plus the
+      // flower's individual rotation) — same reasoning as the old bulb had
+      // for reading as attached rather than floating — and each petal then
+      // adds its own ring position (spread around the stem) and outward
+      // tilt (splaying open) on top of that shared base.
+      tipOffset.set(
         Math.sin(stemLean) * f.height * f.scale,
         Math.cos(stemLean) * f.height * f.scale,
         0
       );
       position.set(bx + tipOffset.x, by + tipOffset.y, bz + tipOffset.z);
       euler.set(stemLean * 0.6, f.bulbRotationY + windSway * 0.5, windLean);
-      quaternion.setFromEuler(euler);
-      scaleVec.setScalar(f.scale * (1.35 + f.depthFactor * 0.2));
-      matrix.compose(position, quaternion, scaleVec);
-      bulb.setMatrixAt(i, matrix);
+      flowerQuat.setFromEuler(euler);
+
+      // buildPetalShape()'s own local profile is already ~0.76 wide by 1.0
+      // tall (narrow base, bulging belly, rounded tip) — these are overall
+      // scale multipliers on that baked shape, not raw dimensions.
+      const petalLength = f.scale * (0.36 + f.depthFactor * 0.05);
+      const petalWidth = f.scale * 0.34;
+      const petalThickness = f.scale * 0.14;
+
+      for (let j = 0; j < PETALS_PER_FLOWER; j++) {
+        // Deterministic per-petal variation from the flower's own seed and
+        // the petal index — real variety between petals without storing
+        // extra per-flower arrays.
+        const petalSeed = f.phase + j * 1.79;
+        const ringAngle = (j / PETALS_PER_FLOWER) * Math.PI * 2 + Math.sin(petalSeed) * 0.12;
+        // Alternating outer/inner tilt is what makes six evenly-spaced
+        // petals actually read as layered and overlapping rather than a
+        // single flat ring — the same "3 outer + 3 inner" structure a real
+        // tulip has. Tilted in twice now: first from 0.6/0.42 to 0.24/0.13,
+        // then — after checking real closed-tulip photos and finding the
+        // flower still read as slightly open — down to near-vertical. A
+        // genuinely closed tulip's petals run almost parallel to the stem;
+        // any real "opening" angle in reference photos is only a few
+        // degrees.
+        const outer = j % 2 === 0;
+        const tilt = (outer ? 0.13 : 0.06) + Math.cos(petalSeed * 1.3) * 0.02;
+        const petalScaleJ = 0.92 + Math.sin(petalSeed * 2.1) * 0.08;
+
+        ringQuat.setFromAxisAngle(Y_AXIS, ringAngle);
+        tiltQuat.setFromAxisAngle(X_AXIS, tilt);
+        // Tilt first (in the petal's own un-rotated frame), then spread
+        // around the ring — quaternion multiplication applies the
+        // right-hand operand first.
+        ringQuat.multiply(tiltQuat);
+        quaternion.copy(flowerQuat).multiply(ringQuat);
+
+        scaleVec.set(
+          petalWidth * petalScaleJ,
+          petalLength * petalScaleJ,
+          petalThickness * petalScaleJ
+        );
+        matrix.compose(position, quaternion, scaleVec);
+        petal.setMatrixAt(petalIndex, matrix);
+        petalIndex++;
+      }
 
       // Leaves: attached lower on the stem, each with its own rotation
       // and tilt so no two look cloned.
@@ -339,7 +512,10 @@ function GardenMeshes({
           stemLean * 0.5
         );
         quaternion.setFromEuler(euler);
-        scaleVec.setScalar(f.scale * (1.1 + f.depthFactor * 0.25));
+        // Halved from an earlier pass — leaves were reading as large as or
+        // larger than the flowers themselves, overpowering them. Leaves
+        // are a supporting element here, not the visual focus.
+        scaleVec.setScalar(f.scale * (0.55 + f.depthFactor * 0.12));
         matrix.compose(position, quaternion, scaleVec);
         leaf.setMatrixAt(leafIndex, matrix);
         leafIndex++;
@@ -348,14 +524,16 @@ function GardenMeshes({
 
     stem.instanceMatrix.needsUpdate = true;
     leaf.instanceMatrix.needsUpdate = true;
-    bulb.instanceMatrix.needsUpdate = true;
+    petal.instanceMatrix.needsUpdate = true;
 
     const stemMat = stem.material as THREE.MeshStandardMaterial;
     const leafMat = leaf.material as THREE.MeshStandardMaterial;
-    const bulbMat = bulb.material as THREE.MeshPhysicalMaterial;
+    const petalMat = petal.material as THREE.MeshPhysicalMaterial;
     stemMat.opacity = reveal;
-    leafMat.opacity = reveal;
-    bulbMat.opacity = reveal;
+    // Leaves recede behind the flowers rather than competing with them —
+    // never fully opaque even at full reveal.
+    leafMat.opacity = reveal * 0.6;
+    petalMat.opacity = reveal;
 
     if (keyRef.current) keyRef.current.intensity = correction.keyIntensity * reveal;
     if (rimRef.current) rimRef.current.intensity = correction.rimIntensity * reveal;
@@ -375,23 +553,37 @@ function GardenMeshes({
         <meshStandardMaterial color={STEM_GREEN} roughness={0.55} metalness={0} transparent opacity={0} />
       </instancedMesh>
       <instancedMesh ref={leafRef} args={[leafGeo, undefined, leafInstanceCount]} frustumCulled={false}>
+        {/* Roughness raised from 0.5 — even with the geometry itself now
+            curved (see buildLeafGeometry), a lower roughness still let
+            the point lights catch a hard, unnaturally uniform highlight
+            across a thin blade at close range. */}
         <meshStandardMaterial
           color={LEAF_GREEN}
-          roughness={0.5}
+          roughness={0.85}
           metalness={0}
           side={THREE.DoubleSide}
           transparent
           opacity={0}
         />
       </instancedMesh>
-      <instancedMesh ref={bulbRef} args={[bulbGeo, undefined, flowers.length]} frustumCulled={false}>
+      <instancedMesh
+        ref={petalRef}
+        args={[petalGeo, undefined, petalInstanceCount]}
+        frustumCulled={false}
+      >
         <meshPhysicalMaterial
-          roughness={0.4}
+          vertexColors
+          roughness={0.26}
           metalness={0}
-          clearcoat={0.15}
-          clearcoatRoughness={0.5}
-          sheen={0.6}
+          clearcoat={0.3}
+          clearcoatRoughness={0.35}
+          // Sheen cut from 0.7 — at that strength its pale highlight layer
+          // was washing the baked petal colour toward white across most of
+          // the surface, a real contributor to the "dull/muted" read
+          // alongside the palette and lighting.
+          sheen={0.25}
           sheenColor={new THREE.Color("#fff4e0")}
+          side={THREE.DoubleSide}
           transparent
           opacity={0}
         />

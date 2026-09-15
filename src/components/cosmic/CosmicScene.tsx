@@ -13,18 +13,34 @@ import {
 import * as THREE from "three";
 import CosmicMoon from "./Moon";
 import CosmicNebula from "./Nebula";
+import MiracleNebula from "./MiracleNebula";
 import CosmicStarField from "./StarField";
 import CoupleModel from "./CoupleModel";
-import TarunRunner from "./TarunRunner";
-import PhotoDissolve from "./PhotoDissolve";
 import StardustTrail from "./StardustTrail";
 import TulipGarden from "./TulipGarden";
 import MemoryBlocks from "./MemoryBlocks";
+import StoryCarousel from "./StoryCarousel";
+import StoryPlantWall from "./StoryPlantWall";
 // AuroraRelic.tsx is deliberately kept on disk, unmounted here — the
 // brief that replaced it with the tulip garden also floated it as a
 // possible distant Finale callback later ("Relic appears far away
 // again"), which this pass doesn't attempt. Real, working, verified
 // component; just not part of the Hero anymore.
+//
+// TarunRunner.tsx and PhotoDissolve.tsx are the same: kept on disk,
+// unmounted here. Both were built specifically for the old standalone
+// "journey" chapter (Tarun running toward its one signature photograph,
+// which then dissolved) — now that chapters 03-05 are merged into one
+// carousel-driven "story" chapter and that same photograph (memory-5)
+// appears as a real, whole card in StoryCarousel.tsx, a running figure
+// racing toward a *second*, separately-dissolving copy of it would compete
+// with the carousel rather than support it.
+//
+// StoryPlantWall.tsx was retired the same way for one pass, then brought
+// back: it now positions itself off to one side (SIDE_OFFSET, its own
+// file) instead of dead-centre, so it can stay mounted as the carousel's
+// supporting scenery rather than a second object fighting for the same
+// straight-ahead spot.
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -142,14 +158,14 @@ const CAMERA_KEYS: CameraKey[] = [
   { chapter: "portal", x: 0, y: 0, z: 9, yaw: 0, pitch: 0.6, fov: 50, drift: 1 },
   // Moving inward through the early memories.
   { chapter: "miracle", x: 0.18, y: 0.12, z: 8, yaw: 0.8, pitch: 0.8, fov: 50, drift: 0.85 },
-  // Denser: crossing into the dust shell through the timeline.
-  { chapter: "story", x: 0.32, y: 0.28, z: 6.8, yaw: 1.6, pitch: 1, fov: 49, drift: 0.75 },
-  // The deepest forward travel of the arc. (Kept far enough back that the
-  // couple figure's staging, tuned for a camera ~8 units out, still reads
-  // as small against the sky.)
-  { chapter: "journey", x: 0.3, y: 0.4, z: 5.2, yaw: 1, pitch: 0.4, fov: 50, drift: 0.7 },
-  // Settling among the remembered stars while the photographs play.
-  { chapter: "memories", x: 0.12, y: 0.52, z: 4.2, yaw: 0.4, pitch: 0.6, fov: 49, drift: 0.4 },
+  // "story" now spans what used to be three separate chapters (story,
+  // journey, memories — merged into one, see content.ts), each of which
+  // used to hold its own key here. One blended key in their place, roughly
+  // averaging the three original poses rather than picking one — the
+  // merged chapter's own content (the story carousel) now supplies its own
+  // internal sense of movement as it rotates, so the camera underneath it
+  // just needs one settled, continuous drift through the whole thing.
+  { chapter: "story", x: 0.25, y: 0.4, z: 5.4, yaw: 1, pitch: 0.65, fov: 49, drift: 0.62 },
   // Motion nearly stopped for the letter.
   { chapter: "letter", x: -0.02, y: 0.58, z: 3.8, yaw: 0.2, pitch: 0.5, fov: 47.5, drift: 0.12 },
   // The cosmos almost gone around the flame (brightness via grade.ts `quiet`).
@@ -513,6 +529,7 @@ function Universe({
           octaves={quality.nebulaOctaves}
           warp={quality.nebulaWarp}
         />
+        <MiracleNebula progressRef={progressRef} />
         <CosmicMoon progressRef={progressRef} segments={quality.moonSegments} />
         <CosmicMoon
           variant="secondary"
@@ -520,10 +537,10 @@ function Universe({
           segments={Math.max(16, Math.round(quality.moonSegments * 0.66))}
         />
         <CoupleModel progressRef={progressRef} />
-        <TarunRunner progressRef={progressRef} />
-        <PhotoDissolve progressRef={progressRef} />
         <TulipGarden progressRef={progressRef} />
         <MemoryBlocks progressRef={progressRef} />
+        <StoryCarousel progressRef={progressRef} />
+        <StoryPlantWall progressRef={progressRef} />
       </WorldGroup>
       <CameraRig
         progressRef={progressRef}

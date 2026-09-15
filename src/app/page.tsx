@@ -3,9 +3,7 @@ import SiteAudioPlayer from "@/components/SiteAudioPlayer";
 import CosmicBackdrop from "@/components/cosmic/CosmicBackdrop";
 import ChapterPortal from "@/components/chapters/ChapterPortal";
 import ChapterMiracle from "@/components/chapters/ChapterMiracle";
-import ChapterTimeline from "@/components/chapters/ChapterTimeline";
-import ChapterJourney from "@/components/chapters/ChapterJourney";
-import MemoryGallery from "@/components/MemoryGallery";
+import ChapterStory from "@/components/chapters/ChapterStory";
 import LoveLetter from "@/components/LoveLetter";
 import CandleInteraction from "@/components/CandleInteraction";
 import ChapterFinale from "@/components/chapters/ChapterFinale";
@@ -24,9 +22,14 @@ export default function Home() {
       <main id="main-content">
         <ChapterPortal />
         <ChapterMiracle />
-        <ChapterTimeline />
-        <ChapterJourney />
-        <MemoryGallery />
+        {/* Chapters 03-05 (story/journey/memories) merged into one chapter
+            — see content.ts and ChapterStory.tsx. The three DOM components
+            it replaced (ChapterTimeline.tsx, ChapterJourney.tsx,
+            MemoryGallery.tsx) and CosmicPath.tsx, which only they used,
+            have been deleted rather than kept unmounted — unlike
+            AuroraRelic.tsx, none of them had a plausible future use once
+            their content had a real successor. */}
+        <ChapterStory />
         <LoveLetter />
         <CandleInteraction />
         <ChapterFinale />

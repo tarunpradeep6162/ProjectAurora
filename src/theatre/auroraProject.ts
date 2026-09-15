@@ -111,8 +111,12 @@ export const theatreMemoryBlocks = masterSheet.object("MemoryBlocks", {
 export const theatreTulipGarden = masterSheet.object("TulipGarden", {
   reveal: types.number(1, { range: [0, 1.4], label: "Reveal" }),
   windStrength: types.number(1, { range: [0, 2], label: "Wind" }),
-  keyIntensity: types.number(2.2, { range: [0, 6] }),
-  rimIntensity: types.number(1.3, { range: [0, 6] }),
+  // Raised from 2.2/1.3 — confirmed live the garden read as dull/low-
+  // contrast next to real tulip photography; more key/rim punch plus the
+  // richer palette and steeper vertex-shade contrast (TulipGarden.tsx) is
+  // what actually makes the petals pop instead of sitting flat.
+  keyIntensity: types.number(3.1, { range: [0, 6] }),
+  rimIntensity: types.number(1.9, { range: [0, 6] }),
 });
 
 /**

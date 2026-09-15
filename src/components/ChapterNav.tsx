@@ -13,9 +13,9 @@ import { chapters, hiddenMessages } from "@/lib/content";
 const NAV_LABELS: Record<string, string> = {
   portal: "The Beginning",
   miracle: "A Favourite Miracle",
+  // Chapters 03-05 (story/journey/memories) are one merged chapter now —
+  // see content.ts — so this single label covers all three.
   story: "Our Story",
-  journey: "The Journey",
-  memories: "Memories",
   letter: "My Letter",
   birthday: "Your Wish",
   finale: "Forever",
