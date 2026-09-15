@@ -34,3 +34,11 @@ export function useActiveCardIndex(): number {
     () => 0
   );
 }
+
+/** Plain, non-React read of the same value — for `useFrame` loops (e.g.
+ * StoryPlantWall.tsx's "Hard Days" mood dip), which aren't React render
+ * contexts and shouldn't subscribe to re-renders just to read one number
+ * every frame. */
+export function getActiveCardIndex(): number {
+  return activeIndex;
+}

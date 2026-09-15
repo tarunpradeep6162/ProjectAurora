@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
+import { getActiveCardIndex } from "./storyCarouselState";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
+import { timeline } from "@/lib/content";
 
 /**
  * "The Core": the merged story chapter's central 3D plant, fixed at world
@@ -132,6 +134,17 @@ const WOOD_COLOR = new THREE.Color("#8a6640");
 // `timeline` array in content.ts is always length 5) — an equal-width band
 // of chapterProgress per phase.
 const PHASE_COUNT = 5;
+
+// "Hard Days" gets its own mood, not just its own growth band: reduced
+// light and quieter particles exactly while that memory is the carousel's
+// actual front card (StoryCarousel.tsx / storyCarouselState.ts) — the
+// real, observed card, not an assumed chapterProgress window. The two
+// don't line up 1:1: this wall's own five growth phases are evenly spaced
+// across the whole chapter (bandWidth 1/5 each), but the carousel has
+// eleven cards spaced roughly 1/10 apart, so "phase 4" and "the Hard Days
+// card is at the front" land at different points in the scroll. Reading
+// the carousel's own state directly avoids that drift.
+const HARD_DAYS_CARD_INDEX = timeline.findIndex((t) => t.title === "The Hard Days");
 
 type LeafDatum = {
   x: number;
@@ -267,6 +280,11 @@ export default function StoryPlantWall({
   // of that phase, so scrolling into it again re-triggers the same swell.
   const bloomPulseRef = useRef(0);
   const enteredFinalPhaseRef = useRef(false);
+  // 0-1, smoothly tracks whether the Hard Days card is currently at the
+  // carousel's front — dims light and quiets the sparkle burst while it
+  // is, per the brief's "reduced light, reduced particles" mood for that
+  // memory specifically.
+  const hardDaysMoodRef = useRef(0);
 
   const fernGeo = useMemo(() => buildLeafGeometry(buildFernShape(), 0.05), []);
   const broadGeo = useMemo(() => buildLeafGeometry(buildBroadShape(), 0.07), []);
@@ -388,8 +406,16 @@ export default function StoryPlantWall({
     bloomPulseRef.current *= Math.exp(-dt / 0.7);
     const bloomPulse = bloomPulseRef.current;
 
-    if (keyRef.current) keyRef.current.intensity = 2.6 * presence * (1 + 0.7 * bloomPulse);
-    if (rimRef.current) rimRef.current.intensity = 1.4 * presence * (1 + 0.5 * bloomPulse);
+    // Hard Days mood: reads the carousel's real active card, not a
+    // chapterProgress guess (see HARD_DAYS_CARD_INDEX's own comment).
+    const isHardDays = active && getActiveCardIndex() === HARD_DAYS_CARD_INDEX;
+    hardDaysMoodRef.current +=
+      ((isHardDays ? 1 : 0) - hardDaysMoodRef.current) * Math.min(1, dt * 1.8);
+    const hardDaysMood = hardDaysMoodRef.current;
+    const moodDim = 1 - 0.45 * hardDaysMood;
+
+    if (keyRef.current) keyRef.current.intensity = 2.6 * presence * (1 + 0.7 * bloomPulse) * moodDim;
+    if (rimRef.current) rimRef.current.intensity = 1.4 * presence * (1 + 0.5 * bloomPulse) * moodDim;
 
     let fi = 0;
     let bi = 0;
@@ -423,10 +449,12 @@ export default function StoryPlantWall({
       const twinkle = 0.6 + 0.4 * Math.sin(timeRef.current * 1.6 + sparkleIdx * 2.1);
       // The same swell as the lights above, felt here as the sparkles
       // momentarily brightening/enlarging — a small burst timed to the
-      // chapter's culminating phase rather than a constant twinkle.
+      // chapter's culminating phase rather than a constant twinkle. Quieted
+      // by the same Hard Days mood the lights dim for — fewer, calmer
+      // points of light while that memory holds the front.
       position.set(s.x, s.y, s.z);
       quaternion.identity();
-      scaleVec.setScalar(growth * twinkle * (1 + 1.1 * bloomPulse));
+      scaleVec.setScalar(growth * twinkle * (1 + 1.1 * bloomPulse) * moodDim);
       matrix.compose(position, quaternion, scaleVec);
       sparkle.setMatrixAt(sparkleIdx++, matrix);
     }

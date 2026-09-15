@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chapters } from "@/lib/content";
-import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
+import { subscribeSceneFrame, readSceneProgress } from "@/components/cosmic/sceneProgress";
 import { setSiteAudioOn } from "@/lib/audioPreference";
 
 const AUDIO_PREF_KEY = "aurora-audio-on";
 const BASE_VOLUME = 0.35;
 const LETTER_VOLUME = 0.12; // quieter during the letter, per the brief
-const VOLUME_RAMP_MS = 900;
-const RAMP_STEP_MS = 40;
 
-const LETTER_INDEX = chapters.findIndex((c) => c.id === "letter");
+// Sound bridge: the hush leads the visual "Gravity Moment" rather than
+// snapping only once the Letter chapter's own boundary is crossed — the
+// same chapterProgress window StoryCarousel.tsx's own convergence uses
+// (its ring pulls inward starting at 0.82), so the score is already most
+// of the way to the Letter's quiet by the time the scene actually cuts.
+const BRIDGE_START = 0.82;
+const BRIDGE_END = 0.98;
 
 /**
  * Lightweight custom audio player for the site's background track.
@@ -21,18 +24,19 @@ const LETTER_INDEX = chapters.findIndex((c) => c.id === "letter");
  * playback, but browsers may still block it; that failure is caught
  * silently and simply leaves the control paused, exactly like a first visit.
  *
- * While the Letter chapter owns the screen the volume ramps down (the brief
- * asks for the whole site to go quieter there) and back up afterwards.
- * The active chapter comes from the shared scroll store rather than an
- * IntersectionObserver, and the ramp runs on a plain interval rather than
- * requestAnimationFrame — both keep working in contexts where those
- * callback APIs never fire (a backgrounded tab, a sandboxed webview).
+ * Volume is driven continuously off the shared scroll signal
+ * (`subscribeSceneFrame`, the same convention CosmicAtmosphere.tsx already
+ * uses for its own CSS custom properties) rather than a discrete "chapter
+ * index changed" effect with its own separate tween — one continuous
+ * system, and it's what makes the sound bridge above possible at all: a
+ * step function has no in-between value to lead the visual with.
+ * Exponential smoothing toward the target each scroll tick gives the same
+ * "glides, never snaps" feel every other scrubbed value on this site
+ * already has, without a second requestAnimationFrame/setInterval loop.
  */
 export default function SiteAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-  const rampRef = useRef<number | null>(null);
-  const activeIndex = useActiveChapterIndex();
 
   // The birthday chime (birthdayChime.ts) reads this to decide whether it
   // may make any sound at all — it should never speak up on its own if the
@@ -66,32 +70,28 @@ export default function SiteAudioPlayer() {
     return () => audio.removeEventListener("ended", onEnd);
   }, []);
 
-  // Ramp volume down while the Letter is on screen, back up elsewhere.
+  // Continuous volume: quiet for the Letter, base everywhere else, with a
+  // smoothstepped bridge leading into the Letter from Story's own closing
+  // stretch rather than a hard cut at the chapter boundary.
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const target = activeIndex === LETTER_INDEX ? LETTER_VOLUME : BASE_VOLUME;
-    if (Math.abs(audio.volume - target) < 0.005) return;
-
-    if (rampRef.current !== null) window.clearInterval(rampRef.current);
-    const start = audio.volume;
-    const startTime = performance.now();
-    rampRef.current = window.setInterval(() => {
+    return subscribeSceneFrame(() => {
       const el = audioRef.current;
       if (!el) return;
-      const t = Math.min(1, (performance.now() - startTime) / VOLUME_RAMP_MS);
-      el.volume = start + (target - start) * t;
-      if (t >= 1 && rampRef.current !== null) {
-        window.clearInterval(rampRef.current);
-        rampRef.current = null;
+      const progress = readSceneProgress();
+      let target = BASE_VOLUME;
+      if (progress.chapterId === "letter") {
+        target = LETTER_VOLUME;
+      } else if (progress.chapterId === "story") {
+        const t = Math.min(
+          1,
+          Math.max(0, (progress.chapterProgress - BRIDGE_START) / (BRIDGE_END - BRIDGE_START))
+        );
+        const eased = t * t * (3 - 2 * t);
+        target = BASE_VOLUME + (LETTER_VOLUME - BASE_VOLUME) * eased;
       }
-    }, RAMP_STEP_MS);
-
-    return () => {
-      if (rampRef.current !== null) window.clearInterval(rampRef.current);
-      rampRef.current = null;
-    };
-  }, [activeIndex]);
+      el.volume += (target - el.volume) * 0.08;
+    });
+  }, []);
 
   async function toggle() {
     const audio = audioRef.current;
