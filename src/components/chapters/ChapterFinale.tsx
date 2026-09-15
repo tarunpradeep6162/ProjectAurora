@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Image from "next/image";
-import { memories, site } from "@/lib/content";
+import { chapters, memories, site } from "@/lib/content";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useActiveChapterIndex } from "@/components/cosmic/sceneProgress";
 import { useInViewReveal } from "@/components/chapters/useInViewReveal";
@@ -95,17 +95,31 @@ export default function ChapterFinale() {
           <span className="reveal-line">Happy Birthday, my love.</span>
         </p>
 
-        <nav aria-label="Revisit the story" className="finale-actions" data-reveal="fade">
-          <button type="button" onClick={() => scrollTo("portal")} className="btn-quiet">
-            Replay our story
-          </button>
-        </nav>
+        {/* The chapter's own real title (content.ts — previously sr-only
+            only, same discipline as Ordinary Days surfacing its own real
+            note rather than new copy) as the finale's actual closing
+            thought, held back until after the birthday line has had its
+            own moment rather than arriving alongside it. */}
+        <p
+          className="type-emotion mx-auto mt-[clamp(3rem,9svh,5rem)] max-w-md text-center italic"
+          data-reveal="fade"
+        >
+          {chapters[chapters.length - 1].title}
+        </p>
 
         <footer className="finale-dedication" data-reveal="fade">
           <p className="type-meta">Created with love by {site.author}</p>
           <p className="type-meta mt-1">For {site.recipient}</p>
           <p className="type-meta mt-1">{site.birthday}</p>
         </footer>
+
+        {/* Last on screen, on purpose (Part 29) — the film has finished
+            saying what it came to say before it ever offers a control. */}
+        <nav aria-label="Revisit the story" className="finale-actions" data-reveal="fade">
+          <button type="button" onClick={() => scrollTo("portal")} className="btn-quiet">
+            Replay our story
+          </button>
+        </nav>
       </div>
     </section>
   );

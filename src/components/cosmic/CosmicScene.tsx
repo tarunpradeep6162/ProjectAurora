@@ -251,6 +251,22 @@ function sampleCameraArc(position: number, out: Pose) {
 const DEG = Math.PI / 180;
 
 /**
+ * The finale's own pullback — additive on top of the authored arc, not a
+ * change to it. `CAMERA_KEYS`/`sampleCameraArc` stay exactly what they were:
+ * one static pose for the whole finale chapter, same as every other chapter
+ * that only needs one. This is the one deliberate exception to this file's
+ * own "z only ever decreases" invariant (see CAMERA_KEYS's doc comment) —
+ * earned by being the film's actual last shot, and kept a pure per-frame
+ * addition in CameraRig so nothing about the spline, the other six chapters,
+ * or Theatre's correction hooks has to know it exists.
+ */
+const FINALE_PULL_Z = 13;
+const FINALE_PULL_Y = 2.2;
+const FINALE_PULL_FOV = 5;
+/** Real seconds for the pullback envelope to settle — deliberately slow. */
+const FINALE_PULL_SECONDS = 1.8;
+
+/**
  * Moves the camera along the authored arc. The arc gives a *target*; the
  * camera approaches it with exponential, frame-rate-independent damping
  * (position ~0.9s, orientation and lens ~1.2s), so a chapter-nav jump or a
@@ -278,6 +294,10 @@ function CameraRig({
   const currentRef = useRef<(Pose & { ready: boolean }) | null>(null);
   const pointerRef = useRef({ x: 0, y: 0, sx: 0, sy: 0 });
   const timeRef = useRef(0);
+  // The finale pullback's own smoothed envelope — see FINALE_PULL_Z's own
+  // comment. Tracks the finale chapter's chapterProgress, not storyPosition,
+  // so it advances only across that one chapter's own scroll span.
+  const finalePullRef = useRef(0);
   if (targetRef.current === null) {
     targetRef.current = { x: 0, y: 0, z: 9, yaw: 0, pitch: 0, fov: 50, drift: 1 };
   }
@@ -335,9 +355,19 @@ function CameraRig({
     const ox = (Math.sin(t * 0.2027) * 0.06 + p.sx * 0.18) * drift;
     const oy = (Math.sin(t * 0.2732 + 1.3) * 0.045 + p.sy * 0.1) * drift;
 
+    // The finale's continuous pullback — see FINALE_PULL_Z's own comment.
+    // Real-time damped (not scroll-distance damped) so it always reads as a
+    // slow, held camera move regardless of how fast the visitor scrolls
+    // through the chapter, and reverses the same way scrolling back up.
+    const finalePullTarget =
+      progressRef.current.chapterId === "finale" ? progressRef.current.chapterProgress : 0;
+    finalePullRef.current +=
+      (finalePullTarget - finalePullRef.current) * (1 - Math.exp(-dt / FINALE_PULL_SECONDS));
+    const pull = THREE.MathUtils.smoothstep(finalePullRef.current, 0, 1);
+
     const px = cur.x + ox + (correction?.boostX ?? 0);
-    const py = cur.y + oy + (correction?.boostY ?? 0);
-    const pz = cur.z + (correction?.boostZ ?? 0);
+    const py = cur.y + oy + (correction?.boostY ?? 0) + pull * FINALE_PULL_Y;
+    const pz = cur.z + (correction?.boostZ ?? 0) + pull * FINALE_PULL_Z;
     camera.position.set(px, py, pz);
 
     const yaw = cur.yaw * DEG;
@@ -349,7 +379,7 @@ function CameraRig({
       pz - Math.cos(yaw) * cosPitch * 20
     );
 
-    const targetFov = cur.fov + (correction?.fovBias ?? 0);
+    const targetFov = cur.fov + (correction?.fovBias ?? 0) + pull * FINALE_PULL_FOV;
     if (camera.isPerspectiveCamera && Math.abs(camera.fov - targetFov) > 1e-3) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();
