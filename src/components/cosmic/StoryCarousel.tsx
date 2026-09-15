@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { setActiveCardIndex } from "./storyCarouselState";
@@ -12,17 +12,36 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  * The merged chapter's centrepiece: a real 3D rolling/cylindrical carousel
  * — chapters 03 (story), 04 (journey) and 05 (memories) combined into one
  * chapter (content.ts) whose eleven real moments (five timeline beats, the
- * journey, five real photographs) sit as cards around a cylinder and roll
- * past as the visitor scrolls, built from the brief given for this pass:
- * polar/cylindrical positioning, lerped momentum instead of a direct scroll
- * mapping, real textures (a canvas-drawn card for text moments, a genuine
- * `THREE.TextureLoader` photograph for each memory), and depth-based
- * scale/opacity so the front card reads large and clear while the rest
- * recede.
+ * journey, five real photographs) orbit StoryPlantWall.tsx, fixed at world
+ * origin, and roll past as the visitor scrolls.
  *
- * Two adaptations from that brief, both because this scene already has an
- * established, working system the brief's own scaffold assumed didn't
- * exist yet:
+ * Repositioned from an earlier, camera-relative version (the ring anchored
+ * to `camera.position + forward*distance` every frame) to a genuinely
+ * fixed one per a later spec: the plant stays at world origin `(0,0,0)`
+ * "at all times", and this ring orbits it at a fixed radius rather than
+ * chasing the camera. That also means the ring's *rotation* is now real —
+ * `group.rotation.y` is set directly to the lerped scroll offset (the
+ * spec's own "update a rotation offset applied to a parent group"), with
+ * each card's own position/facing computed once from its fixed slot angle
+ * (`useMemo`, not per frame) rather than re-deriving a scroll-shifted angle
+ * every frame the way the camera-relative version had to.
+ *
+ * `RADIUS` is 3.0, not the spec's example 6: simulated the actual camera
+ * arc for this chapter (CAMERA_KEYS in CosmicScene.tsx) and found its z
+ * never drops below ~4.4 across the chapter's whole scroll — a radius of 6
+ * would put half the ring behind the camera at the chapter's own end. 3.0
+ * keeps the entire ring (every angle, not just the front) safely in front
+ * of the camera throughout, with room to spare.
+ *
+ * Depth falloff (front card large/opaque, back small/faint) still uses
+ * `cos(angle)` as a stand-in for "distance from camera" rather than an
+ * actual per-frame camera-relative measurement: valid here because the
+ * camera's arc stays forward-looking and inside the ring's radius the
+ * whole chapter (confirmed by the same simulation), so "highest world z"
+ * and "nearest the camera" never disagree.
+ *
+ * Two further adaptations from the original build brief, unchanged from
+ * before:
  *
  * - No dedicated `wheel` listener + hand-rolled lerp loop: this site's
  *   whole scroll experience already runs through one shared, canonical
@@ -30,10 +49,10 @@ import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
  *   scroll-driven WebGL object in this scene reads — a second, independent
  *   listener here would be a second source of truth for "how far has the
  *   visitor scrolled" fighting the first. `chapterProgress` supplies the
- *   *target* angle; the actual lerp toward it (the brief's Step 2) still
- *   happens every frame below, using this project's own frame-rate-
- *   independent exponential-damping convention in place of a fixed
- *   per-frame factor, for the same buttery, momentum-like glide.
+ *   *target* rotation; the lerp toward it still happens every frame below,
+ *   using this project's own frame-rate-independent exponential-damping
+ *   convention in place of a fixed per-frame factor, for the same buttery,
+ *   momentum-like glide the spec asks for.
  *
  * - No `THREE.Raycaster` click-to-open: the persistent canvas is mounted
  *   `pointer-events: none` site-wide (CosmicBackdrop.tsx) so the WebGL
@@ -51,8 +70,7 @@ const TOTAL_CHAPTER_ID = "story";
  * with the carousel's own card count, one source of truth. */
 export const CARD_COUNT = timeline.length + 1 + memories.length;
 const ANGLE_STEP = (Math.PI * 2) / CARD_COUNT;
-const RADIUS = 2.0;
-const DISTANCE_AHEAD = 3.4;
+const RADIUS = 3.0;
 
 export type CardKind = "timeline" | "journey" | "photo";
 export type CardDatum = {
@@ -211,7 +229,6 @@ export default function StoryCarousel({
   const cards = useMemo(() => buildCards(), []);
   const photoTextures = usePhotoTextures(cards);
 
-  const camera = useThree((state) => state.camera);
   const groupRef = useRef<THREE.Group>(null);
   const cardRefs = useRef<(THREE.Mesh | null)[]>([]);
   const keyRef = useRef<THREE.PointLight>(null);
@@ -219,6 +236,11 @@ export default function StoryCarousel({
   const presenceRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const lastFrontRef = useRef(-1);
+
+  // Each card's own fixed slot on the ring — computed once, not re-derived
+  // every frame, now that scrolling turns the *group* rather than shifting
+  // each card's own angle individually.
+  const slotAngles = useMemo(() => cards.map((_, i) => i * ANGLE_STEP), [cards]);
 
   // Only 6 of these (5 timeline + journey), so building all of them once —
   // cheap, a handful of offscreen canvas draws — is simpler and compiler-
@@ -237,9 +259,6 @@ export default function StoryCarousel({
     };
   }, [textCardTextures]);
 
-  const forward = useMemo(() => new THREE.Vector3(), []);
-  const anchor = useMemo(() => new THREE.Vector3(), []);
-  const lookTarget = useMemo(() => new THREE.Vector3(), []);
   const cardPos = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((_state, delta) => {
@@ -274,11 +293,12 @@ export default function StoryCarousel({
       (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / 0.45));
     const scrollOffset = scrollOffsetRef.current;
 
-    camera.getWorldDirection(forward);
-    anchor.copy(camera.position).addScaledVector(forward, DISTANCE_AHEAD);
-    group.position.copy(anchor);
-    lookTarget.copy(camera.position);
-    group.lookAt(lookTarget);
+    // Fixed at world origin — the plant (StoryPlantWall.tsx) sits here too,
+    // so the ring orbits it directly rather than each tracking the camera
+    // independently. Scrolling turns the whole group by one rotation
+    // offset (the spec's own Step 3), not each card's own angle.
+    group.position.set(0, 0, 0);
+    group.rotation.set(0, scrollOffset, 0);
 
     let frontIndex = 0;
     let frontDepth = -Infinity;
@@ -286,28 +306,26 @@ export default function StoryCarousel({
     for (let i = 0; i < cards.length; i++) {
       const mesh = cardRefs.current[i];
       if (!mesh) continue;
-      const angle = i * ANGLE_STEP + scrollOffset;
-      const x = Math.sin(angle) * radius;
-      // Adapted sign from the brief's plain cos(angle)*R - R: this carousel
-      // is a child of a group that re-orients toward the camera every
-      // frame (`group.lookAt` above), so "toward camera" is the group's
-      // local -Z, not world -Z as the brief's scaffold assumed. Flipping
-      // the sign here keeps angle 0 — not radius*2 away — the position
-      // nearest the camera, which is what actually makes the front card
-      // read as the large, prominent one.
-      const z = radius * (1 - Math.cos(angle));
+      const slot = slotAngles[i];
+      // Local to the group, which already carries the scroll rotation —
+      // no need to add scrollOffset again here.
+      const x = Math.sin(slot) * radius;
+      const z = Math.cos(slot) * radius;
       cardPos.set(x, 0, z);
       mesh.position.copy(cardPos);
       // Tangent-facing — each card also turns with its position on the
       // ring, the same way a real cylinder's surface would, rather than
       // always billboarding flat at the camera. This is what actually
       // reads as "rolling" instead of "a flat carousel of cards".
-      mesh.rotation.set(0, angle, 0);
+      mesh.rotation.set(0, slot, 0);
 
-      // Depth falloff: 1 at the front (angle 0 mod 2π), 0 at the back —
-      // large and fully opaque up front, smaller and faint receding
-      // around the ring, the brief's Step 4.
-      const depthT = (Math.cos(angle) + 1) / 2;
+      // Depth falloff: 1 at the front (world angle 0 mod 2π — the highest-z
+      // point on the ring, which the camera-simulation in this file's own
+      // doc comment confirms is always the side nearest the camera for
+      // this chapter's actual arc), 0 at the back — large and fully opaque
+      // up front, smaller and faint receding around the ring.
+      const worldAngle = slot + scrollOffset;
+      const depthT = (Math.cos(worldAngle) + 1) / 2;
       const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * presence;
       mesh.scale.setScalar(scale);
       const material = mesh.material as THREE.MeshBasicMaterial;
@@ -325,15 +343,17 @@ export default function StoryCarousel({
     }
 
     if (keyRef.current) {
-      keyRef.current.position.copy(camera.position).addScaledVector(forward, DISTANCE_AHEAD * 0.5);
-      keyRef.current.position.y += 0.6;
       keyRef.current.intensity = 2.2 * presence;
     }
   });
 
   return (
     <group ref={groupRef} visible={false}>
-      <pointLight ref={keyRef} color="#e9dcc4" intensity={0} distance={7} decay={2} />
+      {/* Fixed near the side the camera always approaches from during this
+          chapter (confirmed by the same camera-arc simulation this file's
+          doc comment describes) rather than tracking it — genuinely
+          world-fixed, matching the ring and the plant it lights. */}
+      <pointLight ref={keyRef} position={[1.4, 1.1, 3.6]} color="#e9dcc4" intensity={0} distance={7} decay={2} />
       {cards.map((card, i) => {
         const isPhoto = card.kind === "photo";
         const photoState = isPhoto ? photoTextures[i] : undefined;
