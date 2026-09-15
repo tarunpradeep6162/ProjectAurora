@@ -238,6 +238,9 @@ export default function StoryCarousel({
   const scrollOffsetRef = useRef(0);
   const prevScrollOffsetRef = useRef(0);
   const lastFrontRef = useRef(-1);
+  // Decaying 0-1 envelope: reset to 1 the instant a new card reaches the
+  // front, then eases back down — the "locks into focus" beat's own timer.
+  const focusPulseRef = useRef(0);
 
   // Each card's own fixed slot on the ring — computed once, not re-derived
   // every frame, now that scrolling turns the *group* rather than shifting
@@ -312,8 +315,31 @@ export default function StoryCarousel({
     group.position.set(0, 0, 0);
     group.rotation.set(0, scrollOffset, 0);
 
+    // Found first, in its own quick pass (just angle math, no mesh writes)
+    // — the main pass below needs to already know which card is the front
+    // one so it can give that specific card its "locks into focus" pulse,
+    // rather than reading a frame-stale value.
     let frontIndex = 0;
     let frontDepth = -Infinity;
+    for (let i = 0; i < cards.length; i++) {
+      const worldAngle = slotAngles[i] + scrollOffset;
+      const depthT = (Math.cos(worldAngle) + 1) / 2;
+      if (depthT > frontDepth) {
+        frontDepth = depthT;
+        frontIndex = i;
+      }
+    }
+
+    const frontChanged = frontIndex !== lastFrontRef.current;
+    if (frontChanged) {
+      lastFrontRef.current = frontIndex;
+      setActiveCardIndex(frontIndex);
+      focusPulseRef.current = 1;
+    }
+    // Decays over ~0.3s — a quick, deliberate "found it" beat each time a
+    // new card reaches the front, not a lingering glow.
+    focusPulseRef.current *= Math.exp(-dt / 0.3);
+    const pulse = focusPulseRef.current;
 
     for (let i = 0; i < cards.length; i++) {
       const mesh = cardRefs.current[i];
@@ -338,24 +364,26 @@ export default function StoryCarousel({
       // up front, smaller and faint receding around the ring.
       const worldAngle = slot + scrollOffset;
       const depthT = (Math.cos(worldAngle) + 1) / 2;
-      const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * presence;
+      // The front card gets a brief extra scale and brightness pop on top
+      // of its usual depth-based prominence, right when it becomes the
+      // front card — "locks into focus" as a real, felt moment rather
+      // than something only the depth-of-field blur communicates.
+      const isFront = i === frontIndex;
+      const focusBoost = isFront ? pulse : 0;
+      const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * (1 + 0.08 * focusBoost) * presence;
       mesh.scale.setScalar(scale);
       const material = mesh.material as THREE.MeshBasicMaterial;
       material.opacity = THREE.MathUtils.lerp(0.22, 1, depthT) * presence;
-
-      if (depthT > frontDepth) {
-        frontDepth = depthT;
-        frontIndex = i;
-      }
-    }
-
-    if (frontIndex !== lastFrontRef.current) {
-      lastFrontRef.current = frontIndex;
-      setActiveCardIndex(frontIndex);
+      // A card's material is its own (not instanced), so this can brighten
+      // just the one card — pushed past 1.0 on purpose: this material is
+      // untoneMapped, so an overbright colour here is exactly what
+      // StoryPostFX.tsx's Bloom effect picks up as a genuine highlight,
+      // the same "found it" beat as the scale pop, felt as light this time.
+      material.color.setScalar(1 + 0.4 * focusBoost);
     }
 
     if (keyRef.current) {
-      keyRef.current.intensity = 2.2 * presence;
+      keyRef.current.intensity = 2.2 * presence * (1 + 0.5 * pulse);
     }
   });
 
