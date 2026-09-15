@@ -80,6 +80,7 @@ export default function ChapterNav() {
   const activeIndex = useActiveChapterIndex();
   const current = chapters[activeIndex] ?? chapters[0];
   const inFinale = activeIndex === chapters.length - 1;
+  const inLetter = current.id === "letter";
 
   // Let the finale close the site without this fixed control sitting over
   // its own revisit links (see `.chrome-recede` / `data-finale-hush` in
@@ -91,6 +92,18 @@ export default function ChapterNav() {
     else html.removeAttribute("data-finale-hush");
     return () => html.removeAttribute("data-finale-hush");
   }, [inFinale]);
+
+  // The Letter is the one chapter this site asks to read as a quiet scene
+  // rather than a page — see `.letter-hush` for the sky, and this for the
+  // corner chrome (this same nav button, the audio toggle) receding the
+  // same way it already does for the finale, so nothing reads as "website"
+  // while Tarun's words are on screen.
+  useEffect(() => {
+    const html = document.documentElement;
+    if (inLetter) html.setAttribute("data-letter-hush", "");
+    else html.removeAttribute("data-letter-hush");
+    return () => html.removeAttribute("data-letter-hush");
+  }, [inLetter]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

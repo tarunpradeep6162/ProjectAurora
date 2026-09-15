@@ -488,20 +488,25 @@ body {
 
 /* Fixed chrome (chapter menu, sound). Recedes completely while the candle
    holds its darkness and during the entry transition — see
-   `data-aurora-hush`, set by CandleInteraction and ChapterPortal — and while
+   `data-aurora-hush`, set by CandleInteraction and ChapterPortal — while
    the finale chapter is active (`data-finale-hush`, set by ChapterNav from
-   the same active-chapter signal the "08 / 08" indicator already reads).
-   The finale is the site's closing chapter: on short viewports its own
-   in-page revisit links (Replay the Journey, etc.) can scroll directly
-   beneath this fixed corner control, and receding it there also matches
-   the direction that navigation chrome should give way to the dedication
-   rather than compete with it. */
+   the same active-chapter signal the "08 / 08" indicator already reads) —
+   and while the Letter is (`data-letter-hush`, same source). The finale is
+   the site's closing chapter: on short viewports its own in-page revisit
+   links (Replay the Journey, etc.) can scroll directly beneath this fixed
+   corner control, and receding it there also matches the direction that
+   navigation chrome should give way to the dedication rather than compete
+   with it. The Letter recedes it for a different reason: this is the one
+   chapter meant to read as a quiet scene with typography, not a page —
+   a corner button is exactly the kind of "unmistakably a website" chrome
+   that has no place on screen while Tarun's words do. */
 .chrome-recede {
   transition: opacity 0.9s var(--ease-soft), visibility 0s linear 0s;
 }
 
 html[data-aurora-hush] .chrome-recede,
-html[data-finale-hush] .chrome-recede {
+html[data-finale-hush] .chrome-recede,
+html[data-letter-hush] .chrome-recede {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;

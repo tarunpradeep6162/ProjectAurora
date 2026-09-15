@@ -25,6 +25,15 @@ const HUSH_VOLUME = 0.04;
 const BRIDGE_START = 0.82;
 const BRIDGE_END = 0.98;
 
+// The opposite direction: the Letter's own closing stretch begins rising
+// back toward the candle's volume before the Birthday boundary is crossed,
+// the same "audio leads picture" idea mirrored rather than a hard cue only
+// on chapter entry. Narrower and later than the Story bridge above — the
+// Letter should hold its stillness for most of its own scroll and only
+// lift right at the very end, not visibly "warm up" throughout the reading.
+const LETTER_BRIDGE_START = 0.92;
+const LETTER_BRIDGE_END = 1;
+
 /**
  * Lightweight custom audio player for the site's background track.
  * Browsers block unmuted autoplay, so playback always starts from an
@@ -89,7 +98,16 @@ export default function SiteAudioPlayer() {
       const progress = readSceneProgress();
       let target = BASE_VOLUME;
       if (progress.chapterId === "letter") {
-        target = LETTER_VOLUME;
+        const t = Math.min(
+          1,
+          Math.max(
+            0,
+            (progress.chapterProgress - LETTER_BRIDGE_START) /
+              (LETTER_BRIDGE_END - LETTER_BRIDGE_START)
+          )
+        );
+        const eased = t * t * (3 - 2 * t);
+        target = LETTER_VOLUME + (CANDLE_VOLUME - LETTER_VOLUME) * eased;
       } else if (progress.chapterId === "story") {
         const t = Math.min(
           1,
