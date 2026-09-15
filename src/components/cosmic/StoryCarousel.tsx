@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { setActiveCardIndex } from "./storyCarouselState";
+import { carouselVelocity } from "./carouselVelocity";
 import { timeline, journey, memories } from "@/lib/content";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
@@ -235,6 +236,7 @@ export default function StoryCarousel({
 
   const presenceRef = useRef(0);
   const scrollOffsetRef = useRef(0);
+  const prevScrollOffsetRef = useRef(0);
   const lastFrontRef = useRef(-1);
 
   // Each card's own fixed slot on the ring — computed once, not re-derived
@@ -278,7 +280,10 @@ export default function StoryCarousel({
 
     const shown = presence > 0.01;
     group.visible = shown;
-    if (!shown) return;
+    if (!shown) {
+      carouselVelocity.value = 0;
+      return;
+    }
 
     // Target angle: by chapterProgress 0 the first card (a timeline beat)
     // is at the front; by chapterProgress 1 the last card (the final
@@ -292,6 +297,13 @@ export default function StoryCarousel({
     scrollOffsetRef.current +=
       (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / 0.45));
     const scrollOffset = scrollOffsetRef.current;
+
+    // Angular velocity (rad/s) of the *lerped* rotation, not the raw
+    // scroll — StoryPostFX.tsx's chromatic aberration reads this to know
+    // how hard to split the RGB channels, so it should track how fast the
+    // ring is actually visibly turning, not how fast the mouse wheel spun.
+    carouselVelocity.value = Math.abs(scrollOffset - prevScrollOffsetRef.current) / dt;
+    prevScrollOffsetRef.current = scrollOffset;
 
     // Fixed at world origin — the plant (StoryPlantWall.tsx) sits here too,
     // so the ring orbits it directly rather than each tracking the camera
