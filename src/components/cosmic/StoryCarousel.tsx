@@ -74,6 +74,21 @@ export const CARD_COUNT = timeline.length + 1 + memories.length;
 const ANGLE_STEP = (Math.PI * 2) / CARD_COUNT;
 const RADIUS = 3.0;
 
+/**
+ * The signature occlusion cut: one card (memory-4, "Somewhere We Got Lost" —
+ * the second-to-last card, right before Ordinary Days) performs a single
+ * motivated edit as it hands the front off to the final photograph. Not a
+ * new transition system — the card that's already there, already at the
+ * front, briefly pushed toward the camera along the same radius it already
+ * travels on. Real camera-arc z at this handoff (story chapterProgress
+ * ~0.9) is ~4.57 (simulated against CAMERA_KEYS); the ring sits at radius
+ * 3.0 (2.4 on mobile), so a 1.1-unit push leaves a comfortable margin
+ * before the card would ever reach the camera's own position — chosen
+ * deliberately conservative after that check, not tuned by eye.
+ */
+const OCCLUSION_CARD_INDEX = CARD_COUNT - 2;
+const OCCLUSION_PUSH = 1.1;
+
 export type CardKind = "timeline" | "journey" | "photo";
 export type CardDatum = {
   kind: CardKind;
@@ -248,6 +263,12 @@ export default function StoryCarousel({
   // Decaying 0-1 envelope: reset to 1 the instant a new card reaches the
   // front, then eases back down — the "locks into focus" beat's own timer.
   const focusPulseRef = useRef(0);
+  // The occlusion cut's own envelope — reset to 1 the instant the front
+  // hands off across the OCCLUSION_CARD_INDEX <-> +1 boundary (either
+  // scroll direction, so the cut is coherent in reverse too), then decays
+  // over ~300ms real time regardless of scroll speed, the same "elapsed
+  // time, not scroll distance" timing focusPulseRef already established.
+  const occlusionRef = useRef(0);
 
   // Each card's own fixed slot on the ring — computed once, not re-derived
   // every frame, now that scrolling turns the *group* rather than shifting
@@ -359,10 +380,23 @@ export default function StoryCarousel({
 
     const frontChanged = frontIndex !== lastFrontRef.current;
     if (frontChanged) {
+      const prevFront = lastFrontRef.current;
       lastFrontRef.current = frontIndex;
       setActiveCardIndex(frontIndex);
       focusPulseRef.current = 1;
+      // The signature occlusion cut fires exactly at this one handoff,
+      // either scroll direction — see OCCLUSION_CARD_INDEX's own comment.
+      const crossesOcclusionSeam =
+        (prevFront === OCCLUSION_CARD_INDEX && frontIndex === OCCLUSION_CARD_INDEX + 1) ||
+        (prevFront === OCCLUSION_CARD_INDEX + 1 && frontIndex === OCCLUSION_CARD_INDEX);
+      if (crossesOcclusionSeam) occlusionRef.current = 1;
     }
+    // Decays over ~300ms real time (independent of scroll speed) — the
+    // photograph performs one full approach-and-clear regardless of how
+    // fast the visitor scrolled past the seam.
+    occlusionRef.current *= Math.exp(-dt / 0.09);
+    const occlusion = occlusionRef.current;
+    storyMood.occlusion = occlusion;
     // Decays over ~0.3s — a quick, deliberate "found it" beat each time a
     // new card reaches the front, not a lingering glow.
     focusPulseRef.current *= Math.exp(-dt / 0.3);
@@ -377,10 +411,15 @@ export default function StoryCarousel({
       const mesh = cardRefs.current[i];
       if (!mesh) continue;
       const slot = slotAngles[i];
+      // The occlusion card pushes outward along its own radius (toward the
+      // camera, since this handoff happens right as it passes through the
+      // front) — everything else stays on the shared ring radius.
+      const cardRadius =
+        i === OCCLUSION_CARD_INDEX ? ringRadius + occlusion * OCCLUSION_PUSH : ringRadius;
       // Local to the group, which already carries the scroll rotation —
       // no need to add scrollOffset again here.
-      const x = Math.sin(slot) * ringRadius;
-      const z = Math.cos(slot) * ringRadius;
+      const x = Math.sin(slot) * cardRadius;
+      const z = Math.cos(slot) * cardRadius;
       cardPos.set(x, 0, z);
       mesh.position.copy(cardPos);
       // Tangent-facing — each card also turns with its position on the
@@ -402,10 +441,22 @@ export default function StoryCarousel({
       // than something only the depth-of-field blur communicates.
       const isFront = i === frontIndex;
       const focusBoost = isFront ? pulse : 0;
-      const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * (1 + 0.08 * focusBoost) * presence;
+      // The occlusion card's own scale swell, layered on top of its usual
+      // depth-based size rather than replacing it — perspective from the
+      // radius push above already does most of the "fills the viewport"
+      // work, so this only needs to add a moderate amount on top.
+      const occlusionBoost = i === OCCLUSION_CARD_INDEX ? occlusion : 0;
+      const scale =
+        THREE.MathUtils.lerp(0.55, 1.15, depthT) *
+        (1 + 0.08 * focusBoost) *
+        (1 + 1.4 * occlusionBoost) *
+        presence;
       mesh.scale.setScalar(scale);
       const material = mesh.material as THREE.MeshBasicMaterial;
-      material.opacity = THREE.MathUtils.lerp(0.22, 1, depthT) * presence;
+      material.opacity = Math.max(
+        THREE.MathUtils.lerp(0.22, 1, depthT),
+        occlusionBoost
+      ) * presence;
       // A card's material is its own (not instanced), so this can brighten
       // just the one card — pushed past 1.0 on purpose: this material is
       // untoneMapped, so an overbright colour here is exactly what

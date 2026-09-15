@@ -20,6 +20,7 @@ import {
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { carouselVelocity } from "./carouselVelocity";
 import { storyMood } from "./storyMood";
+import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
 /**
  * A five-effect post-processing stack — "Bioluminescent Ethereal Cyber" —
@@ -80,6 +81,15 @@ export default function StoryPostFX({
   const aberrationRef = useRef<ChromaticAberrationEffect>(null);
   const bloomRef = useRef<BloomEffect>(null);
   const dofRef = useRef<DepthOfFieldEffect>(null);
+  // Small screens amplify glow and turn a soft macro blur into visual mud —
+  // this stack had no device-tier awareness at all until now. Base values,
+  // not floors: the same mood multipliers below (Hard Days, closing,
+  // cardFocus, occlusion) still apply on top of whichever base this is.
+  const coarsePointer = useCoarsePointer();
+  const narrow = useNarrowViewport();
+  const mobileTier = coarsePointer || narrow;
+  const baseBloom = mobileTier ? 0.5 : 0.7;
+  const baseBokeh = mobileTier ? 2.8 : 4;
 
   useFrame((_state, delta) => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -138,23 +148,42 @@ export default function StoryPostFX({
         0.35,
         1
       );
-      bloom.intensity = 0.7 * bloomDim;
+      bloom.intensity = baseBloom * bloomDim;
     }
 
     const dof = dofRef.current;
     if (dof) {
-      // A brief, small reduction in blur spread exactly as a card's own
-      // focus pulse lands — the shot reads as snapping clear for an
-      // instant, reinforcing the pulse rather than the pulse being the
-      // only cue that focus just arrived.
-      dof.bokehScale = 4 * (1 - 0.22 * storyMood.cardFocus);
+      // Two opposite, non-conflicting reasons to touch the same value: a
+      // brief *reduction* in blur spread as a card's own focus pulse lands
+      // (the shot reads as snapping clear), and a much larger, brief
+      // *increase* during the signature occlusion cut (StoryCarousel.tsx),
+      // so the one card performing that cut reads unmistakably as thrown
+      // out of focus rather than merely large. The two envelopes are never
+      // meaningfully non-zero at the same instant (one fires on a card
+      // reaching the front, the other on a specific card leaving it), so a
+      // plain sum is enough — no need to pick one over the other.
+      const focusTighten = 0.22 * storyMood.cardFocus;
+      const occlusionSpread = 1.1 * storyMood.occlusion;
+      dof.bokehScale = baseBokeh * (1 - focusTighten + occlusionSpread);
     }
   });
 
   return (
     <EffectComposer enabled={enabled} multisampling={0}>
-      <DepthOfField ref={dofRef} target={[0, 0, 0]} focalLength={0.045} bokehScale={4} height={480} />
-      <Bloom ref={bloomRef} mipmapBlur luminanceThreshold={0.5} luminanceSmoothing={0.3} intensity={0.7} />
+      <DepthOfField
+        ref={dofRef}
+        target={[0, 0, 0]}
+        focalLength={0.045}
+        bokehScale={baseBokeh}
+        height={mobileTier ? 360 : 480}
+      />
+      <Bloom
+        ref={bloomRef}
+        mipmapBlur
+        luminanceThreshold={0.5}
+        luminanceSmoothing={0.3}
+        intensity={baseBloom}
+      />
       <ChromaticAberration ref={aberrationRef} offset={[0, 0]} radialModulation={false} modulationOffset={0} />
       <Vignette eskil={false} offset={0.3} darkness={0.55} />
       <Noise opacity={0.03} blendFunction={BlendFunction.OVERLAY} premultiply />

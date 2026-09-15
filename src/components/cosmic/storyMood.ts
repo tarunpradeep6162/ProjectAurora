@@ -39,4 +39,11 @@ export const storyMood = {
    * reads as "snapping into focus" rather than the pulse being the only
    * cue. */
   cardFocus: 0,
+  /** 0-1, decaying: the signature occlusion cut (StoryCarousel.tsx's
+   * OCCLUSION_CARD_INDEX) is in progress — one specific card is swelling
+   * toward the camera. StoryPostFX.tsx reads it to spike DoF's bokeh
+   * spread further than the passing card's own near-camera blur already
+   * gives it, so the moment reads unmistakably as "thrown out of focus"
+   * rather than just "big." */
+  occlusion: 0,
 };
