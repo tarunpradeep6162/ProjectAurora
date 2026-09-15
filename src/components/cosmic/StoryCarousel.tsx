@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { setActiveCardIndex } from "./storyCarouselState";
 import { carouselVelocity } from "./carouselVelocity";
+import { storyMood } from "./storyMood";
 import { timeline, journey, memories } from "@/lib/content";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
@@ -308,7 +309,16 @@ export default function StoryCarousel({
     const closing = active
       ? THREE.MathUtils.smoothstep(progress.chapterProgress, 0.82, 0.96)
       : 0;
-    const damping = THREE.MathUtils.lerp(0.45, 1.15, closing);
+    // Shared with StoryPostFX.tsx (bloom/DoF ease back for the same window)
+    // — see storyMood.ts for why this one value also stands in for a
+    // separate "Ordinary Days" mood that turned out to land in the same
+    // few seconds rather than needing its own.
+    storyMood.closing = closing;
+    // A touch more damping while the Hard Days memory holds the front —
+    // the ring's own turning visibly slows for that beat specifically, on
+    // top of (not instead of) the gravity window's own heavier damping.
+    const damping =
+      THREE.MathUtils.lerp(0.45, 1.15, closing) + 0.35 * storyMood.hardDays;
     // Frame-rate-independent exponential damping — this project's own
     // convention in place of the brief's fixed per-frame lerp factor, for
     // the same "glides to a stop rather than jumps" momentum feel
@@ -357,6 +367,11 @@ export default function StoryCarousel({
     // new card reaches the front, not a lingering glow.
     focusPulseRef.current *= Math.exp(-dt / 0.3);
     const pulse = focusPulseRef.current;
+    // Shared with StoryPostFX.tsx — the same pulse read as a brief
+    // background-blur reduction, so the rack-focus reads as one authored
+    // beat (background softens ~ focus lands ~ card pops) rather than the
+    // scale/colour pop being the only cue.
+    storyMood.cardFocus = pulse;
 
     for (let i = 0; i < cards.length; i++) {
       const mesh = cardRefs.current[i];

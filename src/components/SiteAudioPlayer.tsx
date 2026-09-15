@@ -7,6 +7,15 @@ import { setSiteAudioOn } from "@/lib/audioPreference";
 const AUDIO_PREF_KEY = "aurora-audio-on";
 const BASE_VOLUME = 0.35;
 const LETTER_VOLUME = 0.12; // quieter during the letter, per the brief
+// Sound headroom for the candle: restrained while lit (so the flame-out cut
+// actually reads as a drop, not just a scene change), then near-silent for
+// the held darkness CandleInteraction.tsx already stages — see its own
+// `data-aurora-hush` attribute, set for exactly the out/dark/stars/universe
+// span and removed once the wish is revealed. Reusing that attribute here
+// rather than adding a second phase signal keeps one source of truth for
+// "the candle sequence currently owns the frame."
+const CANDLE_VOLUME = BASE_VOLUME * 0.55;
+const HUSH_VOLUME = 0.04;
 
 // Sound bridge: the hush leads the visual "Gravity Moment" rather than
 // snapping only once the Letter chapter's own boundary is crossed — the
@@ -88,6 +97,9 @@ export default function SiteAudioPlayer() {
         );
         const eased = t * t * (3 - 2 * t);
         target = BASE_VOLUME + (LETTER_VOLUME - BASE_VOLUME) * eased;
+      } else if (progress.chapterId === "birthday") {
+        const hushed = document.documentElement.hasAttribute("data-aurora-hush");
+        target = hushed ? HUSH_VOLUME : CANDLE_VOLUME;
       }
       el.volume += (target - el.volume) * 0.08;
     });

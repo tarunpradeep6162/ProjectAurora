@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { getActiveCardIndex } from "./storyCarouselState";
+import { storyMood } from "./storyMood";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 import { timeline } from "@/lib/content";
 
@@ -413,6 +414,10 @@ export default function StoryPlantWall({
       ((isHardDays ? 1 : 0) - hardDaysMoodRef.current) * Math.min(1, dt * 1.8);
     const hardDaysMood = hardDaysMoodRef.current;
     const moodDim = 1 - 0.45 * hardDaysMood;
+    // Shared for StoryCarousel.tsx (a touch more rotational damping while
+    // this memory holds the front — movement itself slows, not just the
+    // light) and StoryPostFX.tsx (bloom eases back). See storyMood.ts.
+    storyMood.hardDays = hardDaysMood;
 
     if (keyRef.current) keyRef.current.intensity = 2.6 * presence * (1 + 0.7 * bloomPulse) * moodDim;
     if (rimRef.current) rimRef.current.intensity = 1.4 * presence * (1 + 0.5 * bloomPulse) * moodDim;

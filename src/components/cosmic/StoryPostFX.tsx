@@ -11,9 +11,15 @@ import {
   Vignette,
   Noise,
 } from "@react-three/postprocessing";
-import { BlendFunction, type ChromaticAberrationEffect } from "postprocessing";
+import {
+  BlendFunction,
+  type BloomEffect,
+  type ChromaticAberrationEffect,
+  type DepthOfFieldEffect,
+} from "postprocessing";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { carouselVelocity } from "./carouselVelocity";
+import { storyMood } from "./storyMood";
 
 /**
  * A five-effect post-processing stack — "Bioluminescent Ethereal Cyber" —
@@ -72,6 +78,8 @@ export default function StoryPostFX({
   const [enabled, setEnabled] = useState(false);
   const enabledRef = useRef(false);
   const aberrationRef = useRef<ChromaticAberrationEffect>(null);
+  const bloomRef = useRef<BloomEffect>(null);
+  const dofRef = useRef<DepthOfFieldEffect>(null);
 
   useFrame((_state, delta) => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -115,12 +123,38 @@ export default function StoryPostFX({
     const k = 1 - Math.exp(-dt / 0.18);
     effect.offset.x = THREE.MathUtils.lerp(effect.offset.x, targetOffset, k);
     effect.offset.y = effect.offset.x;
+
+    // Director's pass: the stack reacts to the same story beats the
+    // carousel and plant already track (storyMood.ts), rather than staying
+    // at one constant intensity for the whole chapter regardless of mood.
+    const bloom = bloomRef.current;
+    if (bloom) {
+      // Hard Days and the closing "gravity" window (which is also where
+      // the real Ordinary Days card sits — see storyMood.ts) both pull
+      // bloom back, never past a firm floor so the highlight beats
+      // elsewhere in the chapter keep their headroom.
+      const bloomDim = THREE.MathUtils.clamp(
+        1 - 0.35 * storyMood.hardDays - 0.4 * storyMood.closing,
+        0.35,
+        1
+      );
+      bloom.intensity = 0.7 * bloomDim;
+    }
+
+    const dof = dofRef.current;
+    if (dof) {
+      // A brief, small reduction in blur spread exactly as a card's own
+      // focus pulse lands — the shot reads as snapping clear for an
+      // instant, reinforcing the pulse rather than the pulse being the
+      // only cue that focus just arrived.
+      dof.bokehScale = 4 * (1 - 0.22 * storyMood.cardFocus);
+    }
   });
 
   return (
     <EffectComposer enabled={enabled} multisampling={0}>
-      <DepthOfField target={[0, 0, 0]} focalLength={0.045} bokehScale={4} height={480} />
-      <Bloom mipmapBlur luminanceThreshold={0.5} luminanceSmoothing={0.3} intensity={0.7} />
+      <DepthOfField ref={dofRef} target={[0, 0, 0]} focalLength={0.045} bokehScale={4} height={480} />
+      <Bloom ref={bloomRef} mipmapBlur luminanceThreshold={0.5} luminanceSmoothing={0.3} intensity={0.7} />
       <ChromaticAberration ref={aberrationRef} offset={[0, 0]} radialModulation={false} modulationOffset={0} />
       <Vignette eskil={false} offset={0.3} darkness={0.55} />
       <Noise opacity={0.03} blendFunction={BlendFunction.OVERLAY} premultiply />
