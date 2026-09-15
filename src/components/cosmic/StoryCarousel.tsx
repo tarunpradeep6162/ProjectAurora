@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { isChapterActive, type SceneProgressRef } from "./sceneProgress";
 import { setActiveCardIndex } from "./storyCarouselState";
+import { carouselVelocity } from "./carouselVelocity";
 import { timeline, journey, memories } from "@/lib/content";
 import { useCoarsePointer, useNarrowViewport } from "@/hooks/useMediaQuery";
 
@@ -80,6 +81,11 @@ export type CardDatum = {
   meta: string;
   line: string;
   src?: string;
+  /** A photo's own small personal note (content.ts's `Memory.note`) — real,
+   * genuine, previously sr-only only. ChapterStory.tsx surfaces the last
+   * card's note as the chapter's own quiet closing line ("Ordinary Days")
+   * rather than inventing new copy for that beat. */
+  note?: string;
 };
 
 /** The same 11-card sequence the carousel renders, for ChapterStory.tsx's
@@ -110,6 +116,7 @@ export function buildCards(): CardDatum[] {
       meta: memory.place,
       line: memory.caption,
       src: memory.src,
+      note: memory.note,
     });
   }
   return cards;
@@ -235,7 +242,11 @@ export default function StoryCarousel({
 
   const presenceRef = useRef(0);
   const scrollOffsetRef = useRef(0);
+  const prevScrollOffsetRef = useRef(0);
   const lastFrontRef = useRef(-1);
+  // Decaying 0-1 envelope: reset to 1 the instant a new card reaches the
+  // front, then eases back down — the "locks into focus" beat's own timer.
+  const focusPulseRef = useRef(0);
 
   // Each card's own fixed slot on the ring — computed once, not re-derived
   // every frame, now that scrolling turns the *group* rather than shifting
@@ -278,20 +289,41 @@ export default function StoryCarousel({
 
     const shown = presence > 0.01;
     group.visible = shown;
-    if (!shown) return;
+    if (!shown) {
+      carouselVelocity.value = 0;
+      return;
+    }
 
     // Target angle: by chapterProgress 0 the first card (a timeline beat)
     // is at the front; by chapterProgress 1 the last card (the final
     // photograph) has rolled all the way to the front — one continuous
     // turn across the whole merged chapter's scroll, not per-sub-chapter.
     const targetOffset = -progress.chapterProgress * ANGLE_STEP * (CARD_COUNT - 1);
+    // The "gravity moment": in the chapter's last stretch (0.82-0.96,
+    // ending right where the presence fade toward the Letter begins),
+    // everything visibly gathers rather than just stopping — the ring's
+    // own damping heavies up (time itself feels slower to settle) and,
+    // below, its radius pulls inward toward the plant. Not fully to zero:
+    // a genuine convergence, not a collapse.
+    const closing = active
+      ? THREE.MathUtils.smoothstep(progress.chapterProgress, 0.82, 0.96)
+      : 0;
+    const damping = THREE.MathUtils.lerp(0.45, 1.15, closing);
     // Frame-rate-independent exponential damping — this project's own
     // convention in place of the brief's fixed per-frame lerp factor, for
     // the same "glides to a stop rather than jumps" momentum feel
     // regardless of frame rate.
     scrollOffsetRef.current +=
-      (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / 0.45));
+      (targetOffset - scrollOffsetRef.current) * (1 - Math.exp(-dt / damping));
     const scrollOffset = scrollOffsetRef.current;
+    const ringRadius = radius * (1 - 0.62 * closing);
+
+    // Angular velocity (rad/s) of the *lerped* rotation, not the raw
+    // scroll — StoryPostFX.tsx's chromatic aberration reads this to know
+    // how hard to split the RGB channels, so it should track how fast the
+    // ring is actually visibly turning, not how fast the mouse wheel spun.
+    carouselVelocity.value = Math.abs(scrollOffset - prevScrollOffsetRef.current) / dt;
+    prevScrollOffsetRef.current = scrollOffset;
 
     // Fixed at world origin — the plant (StoryPlantWall.tsx) sits here too,
     // so the ring orbits it directly rather than each tracking the camera
@@ -300,8 +332,31 @@ export default function StoryCarousel({
     group.position.set(0, 0, 0);
     group.rotation.set(0, scrollOffset, 0);
 
+    // Found first, in its own quick pass (just angle math, no mesh writes)
+    // — the main pass below needs to already know which card is the front
+    // one so it can give that specific card its "locks into focus" pulse,
+    // rather than reading a frame-stale value.
     let frontIndex = 0;
     let frontDepth = -Infinity;
+    for (let i = 0; i < cards.length; i++) {
+      const worldAngle = slotAngles[i] + scrollOffset;
+      const depthT = (Math.cos(worldAngle) + 1) / 2;
+      if (depthT > frontDepth) {
+        frontDepth = depthT;
+        frontIndex = i;
+      }
+    }
+
+    const frontChanged = frontIndex !== lastFrontRef.current;
+    if (frontChanged) {
+      lastFrontRef.current = frontIndex;
+      setActiveCardIndex(frontIndex);
+      focusPulseRef.current = 1;
+    }
+    // Decays over ~0.3s — a quick, deliberate "found it" beat each time a
+    // new card reaches the front, not a lingering glow.
+    focusPulseRef.current *= Math.exp(-dt / 0.3);
+    const pulse = focusPulseRef.current;
 
     for (let i = 0; i < cards.length; i++) {
       const mesh = cardRefs.current[i];
@@ -309,8 +364,8 @@ export default function StoryCarousel({
       const slot = slotAngles[i];
       // Local to the group, which already carries the scroll rotation —
       // no need to add scrollOffset again here.
-      const x = Math.sin(slot) * radius;
-      const z = Math.cos(slot) * radius;
+      const x = Math.sin(slot) * ringRadius;
+      const z = Math.cos(slot) * ringRadius;
       cardPos.set(x, 0, z);
       mesh.position.copy(cardPos);
       // Tangent-facing — each card also turns with its position on the
@@ -326,24 +381,26 @@ export default function StoryCarousel({
       // up front, smaller and faint receding around the ring.
       const worldAngle = slot + scrollOffset;
       const depthT = (Math.cos(worldAngle) + 1) / 2;
-      const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * presence;
+      // The front card gets a brief extra scale and brightness pop on top
+      // of its usual depth-based prominence, right when it becomes the
+      // front card — "locks into focus" as a real, felt moment rather
+      // than something only the depth-of-field blur communicates.
+      const isFront = i === frontIndex;
+      const focusBoost = isFront ? pulse : 0;
+      const scale = THREE.MathUtils.lerp(0.55, 1.15, depthT) * (1 + 0.08 * focusBoost) * presence;
       mesh.scale.setScalar(scale);
       const material = mesh.material as THREE.MeshBasicMaterial;
       material.opacity = THREE.MathUtils.lerp(0.22, 1, depthT) * presence;
-
-      if (depthT > frontDepth) {
-        frontDepth = depthT;
-        frontIndex = i;
-      }
-    }
-
-    if (frontIndex !== lastFrontRef.current) {
-      lastFrontRef.current = frontIndex;
-      setActiveCardIndex(frontIndex);
+      // A card's material is its own (not instanced), so this can brighten
+      // just the one card — pushed past 1.0 on purpose: this material is
+      // untoneMapped, so an overbright colour here is exactly what
+      // StoryPostFX.tsx's Bloom effect picks up as a genuine highlight,
+      // the same "found it" beat as the scale pop, felt as light this time.
+      material.color.setScalar(1 + 0.4 * focusBoost);
     }
 
     if (keyRef.current) {
-      keyRef.current.intensity = 2.2 * presence;
+      keyRef.current.intensity = 2.2 * presence * (1 + 0.5 * pulse);
     }
   });
 

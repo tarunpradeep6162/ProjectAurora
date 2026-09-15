@@ -21,6 +21,7 @@ import TulipGarden from "./TulipGarden";
 import MemoryBlocks from "./MemoryBlocks";
 import StoryCarousel from "./StoryCarousel";
 import StoryPlantWall from "./StoryPlantWall";
+import StoryPostFX from "./StoryPostFX";
 // AuroraRelic.tsx is deliberately kept on disk, unmounted here — the
 // brief that replaced it with the tulip garden also floated it as a
 // possible distant Finale callback later ("Relic appears far away
@@ -36,11 +37,16 @@ import StoryPlantWall from "./StoryPlantWall";
 // racing toward a *second*, separately-dissolving copy of it would compete
 // with the carousel rather than support it.
 //
-// StoryPlantWall.tsx was retired the same way for one pass, then brought
-// back: it now positions itself off to one side (SIDE_OFFSET, its own
-// file) instead of dead-centre, so it can stay mounted as the carousel's
-// supporting scenery rather than a second object fighting for the same
-// straight-ahead spot.
+// StoryPlantWall.tsx was retired the same way for one pass (it and
+// StoryCarousel.tsx both wanted the same straight-ahead-of-camera spot),
+// then brought back once both were repositioned to a shared, genuinely
+// fixed world origin instead — see that file's own doc comment.
+//
+// StoryPostFX.tsx (the DoF/Bloom/ChromaticAberration/Vignette/Noise
+// stack) is scoped to this same chapter, not mounted permanently — see
+// its own doc comment for why a persistent single-Canvas scene like this
+// one can't just wrap everything in one EffectComposer without taxing
+// every other chapter's frame budget for a look meant for one of six.
 import { useSceneProgress, type SceneProgressRef } from "./sceneProgress";
 import { chapterAnchor, createGradeSample, sampleGrade } from "./grade";
 import { chapters } from "@/lib/content";
@@ -549,6 +555,7 @@ function Universe({
       />
       <StardustTrail progressRef={progressRef} />
       <TheatreClock progressRef={progressRef} />
+      <StoryPostFX progressRef={progressRef} />
       <FrameBudget onOverBudget={onOverBudget} />
     </>
   );

@@ -261,6 +261,12 @@ export default function StoryPlantWall({
   const presenceRef = useRef(0);
   const timeRef = useRef(0);
   const spinRef = useRef(0);
+  // Swells once when scroll first crosses into the final growth phase
+  // ("05 — Celebration") — the culmination the other four phases build
+  // toward — then eases back down; resets if the visitor scrolls back out
+  // of that phase, so scrolling into it again re-triggers the same swell.
+  const bloomPulseRef = useRef(0);
+  const enteredFinalPhaseRef = useRef(false);
 
   const fernGeo = useMemo(() => buildLeafGeometry(buildFernShape(), 0.05), []);
   const broadGeo = useMemo(() => buildLeafGeometry(buildBroadShape(), 0.07), []);
@@ -365,13 +371,26 @@ export default function StoryPlantWall({
     group.position.set(0, 0, 0);
     group.rotation.set(0, idleSpin + scrollSpin, 0);
 
-    if (keyRef.current) keyRef.current.intensity = 2.6 * presence;
-    if (rimRef.current) rimRef.current.intensity = 1.4 * presence;
-
     // Grow each phase's leaves in as chapterProgress reaches its band —
     // this is what makes "5 phases combined" a real, continuous scroll
     // animation rather than 5 static snapshots.
     const cp = progress.chapterProgress;
+
+    const finalPhaseStart = (PHASE_COUNT - 1) / PHASE_COUNT; // 0.8
+    if (cp >= finalPhaseStart && !enteredFinalPhaseRef.current) {
+      enteredFinalPhaseRef.current = true;
+      bloomPulseRef.current = 1;
+    } else if (cp < finalPhaseStart && enteredFinalPhaseRef.current) {
+      enteredFinalPhaseRef.current = false;
+    }
+    // A slow swell (~0.7s), not a quick snap — this is the chapter's
+    // culminating moment, not a per-card beat.
+    bloomPulseRef.current *= Math.exp(-dt / 0.7);
+    const bloomPulse = bloomPulseRef.current;
+
+    if (keyRef.current) keyRef.current.intensity = 2.6 * presence * (1 + 0.7 * bloomPulse);
+    if (rimRef.current) rimRef.current.intensity = 1.4 * presence * (1 + 0.5 * bloomPulse);
+
     let fi = 0;
     let bi = 0;
     for (const leaf of leaves) {
@@ -402,9 +421,12 @@ export default function StoryPlantWall({
     for (const s of sparkles) {
       const growth = growthAt(cp, s.phase, 0);
       const twinkle = 0.6 + 0.4 * Math.sin(timeRef.current * 1.6 + sparkleIdx * 2.1);
+      // The same swell as the lights above, felt here as the sparkles
+      // momentarily brightening/enlarging — a small burst timed to the
+      // chapter's culminating phase rather than a constant twinkle.
       position.set(s.x, s.y, s.z);
       quaternion.identity();
-      scaleVec.setScalar(growth * twinkle);
+      scaleVec.setScalar(growth * twinkle * (1 + 1.1 * bloomPulse));
       matrix.compose(position, quaternion, scaleVec);
       sparkle.setMatrixAt(sparkleIdx++, matrix);
     }
